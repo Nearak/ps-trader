@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سجل صفقات التداول - نظام المستخدمين</title>
+    <title>مسجل الصفقات</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,8 +15,8 @@
                 <span id="userGreeting">مرحباً، </span>
                 <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
             </div>
-            <h1>سجل صفقات التداول - نظام المستخدمين</h1>
-            <p>سجل وتحليل أداء صفقاتك في التداول</p>
+            <h1><i class="fas fa-chart-line"></i> مسجل صفقات التداول المتكامل</h1>
+            <p>أداة متكاملة لتسجيل وتحليل أداء صفقاتك في التداول</p>
         </header>
         
         <section class="auth-section" id="authSection">
@@ -74,6 +75,7 @@
         <div class="app-content" id="appContent">
             <div class="tabs">
                 <div class="tab active" data-tab="form">إضافة صفقة</div>
+                <div class="tab" data-tab="charts">الرسوم البيانية</div>
                 <div class="tab" data-tab="calendar">تقويم الصفقات</div>
                 <div class="tab" data-tab="list">قائمة الصفقات</div>
             </div>
@@ -85,12 +87,26 @@
                         <form id="tradeForm">
                             <div class="form-group">
                                 <label for="tradeDate">تاريخ الصفقة</label>
-                                <input type="date" id="tradeDate" required>
+                                <input type="datetime-local" id="tradeDate" required>
                             </div>
                             
                             <div class="form-group">
                                 <label for="asset">الأصل المتداول</label>
-                                <input type="text" id="asset" placeholder="مثال: BTC, ETH, Gold" required>
+                                <select id="asset" required>
+                                    <option value="">اختر الأصل</option>
+                                    <option value="BTC">Bitcoin (BTC)</option>
+                                    <option value="ETH">Ethereum (ETH)</option>
+                                    <option value="XRP">Ripple (XRP)</option>
+                                    <option value="LTC">Litecoin (LTC)</option>
+                                    <option value="GOLD">الذهب</option>
+                                    <option value="SILVER">الفضة</option>
+                                    <option value="OIL">النفط</option>
+                                    <option value="EUR/USD">يورو/دولار</option>
+                                    <option value="GBP/USD">جنيه إسترليني/دولار</option>
+                                    <option value="USD/JPY">دولار/ين ياباني</option>
+                                    <option value="other">أخرى</option>
+                                </select>
+                                <input type="text" id="otherAsset" placeholder="اذكر الأصل" style="display: none; margin-top: 5px;">
                             </div>
                             
                             <div class="form-group">
@@ -98,6 +114,16 @@
                                 <select id="tradeType" required>
                                     <option value="شراء">شراء</option>
                                     <option value="بيع">بيع</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="session">جلسة التداول</label>
+                                <select id="session" required>
+                                    <option value="آسيا">جلسة آسيا</option>
+                                    <option value="لندن">جلسة لندن</option>
+                                    <option value="نيويورك">جلسة نيويورك</option>
+                                    <option value="أخرى">جلسة أخرى</option>
                                 </select>
                             </div>
                             
@@ -117,6 +143,11 @@
                             <div class="form-group">
                                 <label for="profitLoss">قيمة الربح/الخسارة ($)</label>
                                 <input type="number" id="profitLoss" placeholder="أدخل قيمة الربح/الخسارة" step="0.01" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="notes">ملاحظات حول الصفقة</label>
+                                <textarea id="notes" placeholder="أضف ملاحظاتك حول الصفقة، استراتيجية الدخول والخروج، الدروس المستفادة..." rows="3"></textarea>
                             </div>
                             
                             <button type="submit"><i class="fas fa-save"></i> إضافة الصفقة</button>
@@ -155,9 +186,46 @@
                                 <div>متوسط الصفقة</div>
                                 <div class="stat-value" id="averageTrade">$0</div>
                             </div>
+                            
+                            <div class="stat-card">
+                                <div>أفضل جلسة</div>
+                                <div class="stat-value" id="bestSession">-</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div>أفضل أصل</div>
+                                <div class="stat-value" id="bestAsset">-</div>
+                            </div>
                         </div>
                     </section>
                 </div>
+            </div>
+            
+            <div class="tab-content" id="charts-tab">
+                <section class="charts-section">
+                    <h2><i class="fas fa-chart-bar"></i> الرسوم البيانية والإحصائيات</h2>
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h3>توزيع الصفقات (ربح/خسارة)</h3>
+                            <canvas id="winLossChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <h3>الأداء حسب جلسات التداول</h3>
+                            <canvas id="sessionChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <h3>الأداء حسب الأصول</h3>
+                            <canvas id="assetChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <h3>تطور الأرباح عبر الزمن</h3>
+                            <canvas id="profitChart"></canvas>
+                        </div>
+                    </div>
+                </section>
             </div>
             
             <div class="tab-content" id="calendar-tab">
@@ -186,6 +254,23 @@
             <div class="tab-content" id="list-tab">
                 <section class="transactions-section">
                     <h2><i class="fas fa-list"></i> سجل الصفقات</h2>
+                    <div class="filters">
+                        <select id="filterAsset">
+                            <option value="">جميع الأصول</option>
+                        </select>
+                        <select id="filterSession">
+                            <option value="">جميع الجلسات</option>
+                            <option value="آسيا">جلسة آسيا</option>
+                            <option value="لندن">جلسة لندن</option>
+                            <option value="نيويورك">جلسة نيويورك</option>
+                            <option value="أخرى">جلسة أخرى</option>
+                        </select>
+                        <select id="filterResult">
+                            <option value="">جميع النتائج</option>
+                            <option value="ربح">الصفقات الرابحة</option>
+                            <option value="خسارة">الصفقات الخاسرة</option>
+                        </select>
+                    </div>
                     <div id="transactionsList">
                         <p class="no-transactions">لا توجد صفقات مسجلة بعد. ابدأ بإضافة أول صفقة.</p>
                     </div>
