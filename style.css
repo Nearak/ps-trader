@@ -8,8 +8,9 @@
     --light-color: #f8f9fa;
     --dark-color: #343a40;
     --background-color: #f5f7fa;
-    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --card-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
     --transition: all 0.3s ease;
+    --border-radius: 12px;
 }
 
 * {
@@ -35,19 +36,24 @@ body {
 header {
     text-align: center;
     margin-bottom: 30px;
-    padding: 25px;
+    padding: 30px;
     background: rgba(255, 255, 255, 0.95);
     color: var(--secondary-color);
-    border-radius: 15px;
+    border-radius: var(--border-radius);
     box-shadow: var(--card-shadow);
     position: relative;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.header-content {
+    margin: 0 auto;
+    max-width: 800px;
+}
+
 .user-info {
     position: absolute;
-    left: 20px;
+    left: 25px;
     top: 50%;
     transform: translateY(-50%);
     display: flex;
@@ -59,17 +65,18 @@ header {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 5px;
+    gap: 8px;
 }
 
 .capital-info {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     background: rgba(52, 152, 219, 0.1);
-    padding: 5px 10px;
-    border-radius: 5px;
+    padding: 8px 12px;
+    border-radius: 8px;
     font-size: 0.9rem;
+    border: 1px solid rgba(52, 152, 219, 0.2);
 }
 
 #editCapitalBtn {
@@ -77,39 +84,46 @@ header {
     border: none;
     color: var(--primary-color);
     cursor: pointer;
-    padding: 2px;
+    padding: 4px;
     width: auto;
+    border-radius: 4px;
+    transition: var(--transition);
 }
 
 #editCapitalBtn:hover {
-    background: none;
+    background: rgba(52, 152, 219, 0.1);
     transform: scale(1.1);
 }
 
 .user-info button {
-    padding: 8px 15px;
+    padding: 10px 18px;
     width: auto;
     background: var(--primary-color);
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     color: white;
     cursor: pointer;
     transition: var(--transition);
+    font-weight: 600;
 }
 
 .user-info button:hover {
     background: #2980b9;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
 }
 
 h1 {
-    font-size: 2.2rem;
+    font-size: 2.5rem;
     margin-bottom: 10px;
     color: var(--secondary-color);
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 h1 i {
-    color: var(--primary-color);
     margin-left: 10px;
 }
 
@@ -129,11 +143,11 @@ h1 i {
 .modal-content {
     background-color: white;
     margin: 10% auto;
-    padding: 25px;
-    border-radius: 15px;
+    padding: 30px;
+    border-radius: var(--border-radius);
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
     position: relative;
     animation: modalSlideIn 0.3s ease;
 }
@@ -160,6 +174,7 @@ h1 i {
     cursor: pointer;
     width: auto;
     background: none;
+    transition: var(--transition);
 }
 
 .close:hover {
@@ -181,8 +196,8 @@ h1 i {
 
 .auth-section {
     background: rgba(255, 255, 255, 0.95);
-    padding: 30px;
-    border-radius: 15px;
+    padding: 40px;
+    border-radius: var(--border-radius);
     box-shadow: var(--card-shadow);
     max-width: 500px;
     margin: 50px auto;
@@ -192,15 +207,16 @@ h1 i {
 
 .auth-tabs {
     display: flex;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     border-radius: 10px;
     overflow: hidden;
     background: #f0f0f0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .auth-tab {
     flex: 1;
-    padding: 12px;
+    padding: 15px;
     text-align: center;
     cursor: pointer;
     background: #f0f0f0;
@@ -231,9 +247,9 @@ h1 i {
 
 .tabs {
     display: flex;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     background: rgba(255, 255, 255, 0.95);
-    border-radius: 15px;
+    border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--card-shadow);
     backdrop-filter: blur(10px);
@@ -242,12 +258,14 @@ h1 i {
 
 .tab {
     flex: 1;
-    padding: 15px;
+    padding: 18px;
     text-align: center;
     cursor: pointer;
     transition: var(--transition);
     font-weight: 600;
     border-right: 1px solid rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
 }
 
 .tab:last-child {
@@ -255,7 +273,7 @@ h1 i {
 }
 
 .tab.active {
-    background: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
     color: white;
 }
 
@@ -269,12 +287,18 @@ h1 i {
 
 .tab-content.active {
     display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .main-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 25px;
     margin-bottom: 30px;
 }
 
@@ -286,8 +310,8 @@ h1 i {
 
 .form-section, .stats-section, .calendar-section, .charts-section, .transactions-section, .performance-section {
     background: rgba(255, 255, 255, 0.95);
-    padding: 25px;
-    border-radius: 15px;
+    padding: 30px;
+    border-radius: var(--border-radius);
     box-shadow: var(--card-shadow);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -300,15 +324,21 @@ h1 i {
 .charts-grid, .performance-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
+    gap: 25px;
+    margin-top: 25px;
 }
 
 .chart-container {
     background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: var(--transition);
+}
+
+.chart-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
 .chart-container.full-width {
@@ -316,68 +346,107 @@ h1 i {
 }
 
 .chart-container h3 {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     text-align: center;
     color: var(--secondary-color);
+    font-size: 1.2rem;
+}
+
+/* تحسينات النماذج */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
 }
 
 .capital-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: 20px;
+    margin-bottom: 25px;
 }
 
 .capital-card {
     background: white;
-    padding: 20px;
-    border-radius: 10px;
+    padding: 25px;
+    border-radius: var(--border-radius);
     text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     border-left: 4px solid var(--primary-color);
+    transition: var(--transition);
+}
+
+.capital-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
 }
 
 .capital-label {
     font-size: 0.9rem;
     color: var(--secondary-color);
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    font-weight: 600;
 }
 
 .capital-value {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: var(--primary-color);
 }
 
 .performance-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 25px;
+    margin-bottom: 35px;
 }
 
 .performance-card {
     background: white;
-    padding: 25px;
-    border-radius: 10px;
+    padding: 30px;
+    border-radius: var(--border-radius);
     text-align: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.performance-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
 }
 
 .performance-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+}
+
+.performance-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
 }
 
 .performance-card h3 {
     color: var(--secondary-color);
-    margin-bottom: 10px;
-    font-size: 1rem;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
 }
 
 .performance-value {
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--primary-color);
 }
@@ -386,50 +455,53 @@ h1 i {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 15px;
 }
 
 .calendar-nav {
     display: flex;
-    gap: 10px;
+    gap: 12px;
 }
 
 .calendar-nav button {
     background: var(--primary-color);
     color: white;
     border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
+    padding: 10px 15px;
+    border-radius: 8px;
     cursor: pointer;
     transition: var(--transition);
+    font-weight: 600;
 }
 
 .calendar-nav button:hover {
     background: #2980b9;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
 }
 
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 5px;
+    gap: 8px;
 }
 
 .calendar-day-header {
     text-align: center;
-    padding: 10px;
+    padding: 15px;
     font-weight: bold;
     background: var(--light-color);
-    border-radius: 5px;
+    border-radius: 8px;
+    color: var(--secondary-color);
 }
 
 .calendar-day {
     border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 10px;
-    min-height: 100px;
+    border-radius: 10px;
+    padding: 12px;
+    min-height: 120px;
     background: white;
     transition: var(--transition);
     cursor: pointer;
@@ -438,8 +510,8 @@ h1 i {
 
 .calendar-day:hover {
     background: #f0f8ff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
 }
 
 .calendar-day.other-month {
@@ -454,14 +526,15 @@ h1 i {
 
 .day-number {
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     display: flex;
     justify-content: space-between;
+    font-size: 1.1rem;
 }
 
 .trade-summary {
     font-size: 0.8rem;
-    margin-top: 5px;
+    margin-top: 8px;
 }
 
 .profit {
@@ -473,12 +546,12 @@ h1 i {
 }
 
 .day-details {
-    margin-top: 20px;
-    padding: 20px;
+    margin-top: 25px;
+    padding: 25px;
     background: var(--light-color);
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     display: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .day-details.active {
@@ -487,36 +560,38 @@ h1 i {
 }
 
 .day-trades {
-    margin-top: 15px;
+    margin-top: 20px;
 }
 
 .trade-item {
     display: flex;
     justify-content: space-between;
-    padding: 12px;
+    align-items: center;
+    padding: 15px;
     border-bottom: 1px solid #e0e0e0;
     transition: var(--transition);
 }
 
 .trade-item:hover {
     background: rgba(52, 152, 219, 0.1);
-    border-radius: 5px;
+    border-radius: 8px;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     font-weight: 600;
     color: var(--secondary-color);
+    font-size: 1rem;
 }
 
-input, select, textarea, button, .file-input {
+input, select, textarea, button {
     width: 100%;
-    padding: 12px;
+    padding: 15px;
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 16px;
@@ -526,46 +601,72 @@ input, select, textarea, button, .file-input {
 input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+/* تحسينات إدخال الملفات */
+.file-input-container {
+    position: relative;
+    margin-bottom: 10px;
 }
 
 .file-input {
-    padding: 10px;
-    background: white;
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
     cursor: pointer;
 }
 
-.file-input:hover {
+.file-input-label {
+    display: block;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--secondary-color);
+}
+
+.file-input-label:hover {
     border-color: var(--primary-color);
+    background: rgba(52, 152, 219, 0.05);
+}
+
+.file-input-label i {
+    margin-left: 8px;
 }
 
 .image-preview {
     position: relative;
-    margin-top: 10px;
+    margin-top: 15px;
     border: 2px dashed #ddd;
     border-radius: 8px;
-    padding: 10px;
+    padding: 15px;
     text-align: center;
+    background: #f8f9fa;
 }
 
 .image-preview img {
     max-width: 100%;
     max-height: 200px;
-    border-radius: 5px;
+    border-radius: 6px;
 }
 
 #removeImageBtn {
     position: absolute;
-    top: 5px;
-    left: 5px;
+    top: 10px;
+    left: 10px;
     width: auto;
-    padding: 5px 8px;
+    padding: 8px 12px;
     background: var(--danger-color);
 }
 
 textarea {
     resize: vertical;
-    min-height: 80px;
+    min-height: 100px;
 }
 
 button {
@@ -581,26 +682,32 @@ button {
 
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
 }
 
 button:active {
     transform: translateY(0);
 }
 
+.submit-btn {
+    padding: 18px;
+    font-size: 1.1rem;
+    margin-top: 10px;
+}
+
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 25px;
 }
 
 .stat-card {
     background: white;
-    padding: 20px;
-    border-radius: 10px;
+    padding: 25px;
+    border-radius: var(--border-radius);
     text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     transition: var(--transition);
     position: relative;
     overflow: hidden;
@@ -613,16 +720,29 @@ button:active {
     left: 0;
     right: 0;
     height: 4px;
-    background: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
 }
 
 .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+    font-weight: 600;
 }
 
 .stat-value {
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
     margin: 10px 0;
 }
@@ -637,36 +757,37 @@ button:active {
 
 .transactions-section .filters {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 25px;
     flex-wrap: wrap;
 }
 
 .transactions-section .filters select {
     flex: 1;
-    min-width: 150px;
+    min-width: 160px;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 25px;
     background: white;
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 th, td {
-    padding: 12px 15px;
+    padding: 15px;
     text-align: right;
     border-bottom: 1px solid #e0e0e0;
 }
 
 th {
-    background-color: var(--light-color);
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
+    color: white;
     font-weight: 600;
-    color: var(--secondary-color);
+    font-size: 1rem;
 }
 
 tr:hover {
@@ -677,35 +798,37 @@ tr:hover {
     background-color: var(--danger-color);
     color: white;
     border: none;
-    padding: 8px 12px;
-    border-radius: 4px;
+    padding: 10px 15px;
+    border-radius: 6px;
     cursor: pointer;
     width: auto;
     transition: var(--transition);
+    font-weight: 600;
 }
 
 .delete-btn:hover {
     background-color: #c0392b;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
 
 .no-transactions {
     text-align: center;
-    padding: 40px;
+    padding: 50px;
     color: #7f8c8d;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
 .calendar-day.selected {
     background: #d4edff;
     border-color: #2980b9;
-    box-shadow: 0 0 0 2px var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-color);
 }
 
 .alert {
-    padding: 12px;
+    padding: 15px;
     border-radius: 8px;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     display: none;
     animation: slideIn 0.5s ease;
 }
@@ -741,10 +864,11 @@ tr:hover {
 
 .session-badge {
     display: inline-block;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
     margin-top: 3px;
+    font-weight: 600;
 }
 
 .session-asia {
@@ -772,22 +896,19 @@ tr:hover {
 }
 
 .trade-image {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     object-fit: cover;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
     transition: var(--transition);
+    border: 2px solid transparent;
 }
 
 .trade-image:hover {
     transform: scale(1.1);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    border-color: var(--primary-color);
 }
 
 @keyframes slideIn {
@@ -799,10 +920,10 @@ tr:hover {
     .user-info {
         position: static;
         justify-content: center;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
         transform: none;
         flex-direction: column;
-        gap: 10px;
+        gap: 15px;
     }
     
     .user-details {
@@ -815,7 +936,7 @@ tr:hover {
     
     .calendar-header {
         flex-direction: column;
-        gap: 10px;
+        gap: 15px;
     }
     
     .calendar-nav {
@@ -828,7 +949,7 @@ tr:hover {
     }
     
     h1 {
-        font-size: 1.8rem;
+        font-size: 2rem;
     }
     
     .tabs {
@@ -853,7 +974,16 @@ tr:hover {
     }
     
     th, td {
-        padding: 8px 10px;
+        padding: 10px 12px;
+    }
+    
+    .calendar-day {
+        min-height: 100px;
+        padding: 8px;
+    }
+    
+    .form-section, .stats-section, .calendar-section, .charts-section, .transactions-section, .performance-section {
+        padding: 20px;
     }
 }
 
