@@ -44,11 +44,21 @@ const losingTradesEl = document.getElementById('losingTrades');
 const successRateEl = document.getElementById('successRate');
 const totalProfitLossEl = document.getElementById('totalProfitLoss');
 const averageTradeEl = document.getElementById('averageTrade');
+const bestSessionEl = document.getElementById('bestSession');
+const bestAssetEl = document.getElementById('bestAsset');
+
+// عناصر الفلاتر
+const filterAsset = document.getElementById('filterAsset');
+const filterSession = document.getElementById('filterSession');
+const filterResult = document.getElementById('filterResult');
 
 // عناصر التحكم في التقويم
 const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 const currentMonthBtn = document.getElementById('current-month');
+
+// عناصر الرسم البياني
+let winLossChart, sessionChart, assetChart, profitChart;
 
 // تهيئة التطبيق
 function initApp() {
@@ -81,6 +91,11 @@ function setupEventListeners() {
         tab.addEventListener('click', function() {
             const tabId = this.getAttribute('data-tab');
             switchAppTab(tabId);
+            
+            // إذا كان التبويب هو الرسوم البيانية، قم بتحديثها
+            if (tabId === 'charts') {
+                updateCharts();
+            }
         });
     });
     
@@ -100,21 +115,42 @@ function setupEventListeners() {
         renderCalendar();
     });
     
+    // إدارة حقل الأصل الآخر
+    document.getElementById('asset').addEventListener('change', function() {
+        const otherAssetInput = document.getElementById('otherAsset');
+        if (this.value === 'other') {
+            otherAssetInput.style.display = 'block';
+            otherAssetInput.required = true;
+        } else {
+            otherAssetInput.style.display = 'none';
+            otherAssetInput.required = false;
+        }
+    });
+    
     // تعيين تاريخ اليوم كقيمة افتراضية
-    document.getElementById('tradeDate').valueAsDate = new Date();
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('tradeDate').value = now.toISOString().slice(0, 16);
     
     // إضافة صفقة جديدة
     tradeForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
+        let asset = document.getElementById('asset').value;
+        if (asset === 'other') {
+            asset = document.getElementById('otherAsset').value;
+        }
+        
         const trade = {
             id: Date.now(),
             date: document.getElementById('tradeDate').value,
-            asset: document.getElementById('asset').value,
+            asset: asset,
             type: document.getElementById('tradeType').value,
+            session: document.getElementById('session').value,
             amount: parseFloat(document.getElementById('amount').value),
             result: document.getElementById('result').value,
-            profitLoss: parseFloat(document.getElementById('profitLoss').value)
+            profitLoss: parseFloat(document.getElementById('profitLoss').value),
+            notes: document.getElementById('notes').value
         };
         
         trades.push(trade);
@@ -122,10 +158,29 @@ function setupEventListeners() {
         renderTrades();
         updateStats();
         renderCalendar();
+        updateFilterOptions();
         
         // إعادة تعيين النموذج
         tradeForm.reset();
-        document.getElementById('tradeDate').valueAsDate = new Date();
+        document.getElementById('tradeDate').value = now.toISOString().slice(0, 16);
+        document.getElementById('otherAsset').style.display = 'none';
+        
+        // إظهار رسالة نجاح
+        showAlert(loginAlert, 'تم إضافة الصفقة بنجاح!', 'success');
+    });
+    
+    // أحداث الفلاتر
+    filterAsset.addEventListener('change', renderTrades);
+    filterSession.addEventListener('change', renderTrades);
+    filterResult.addEventListener('change', renderTrades);
+}
+
+// تحديث خيارات الفلتر
+function updateFilterOptions() {
+    const assets = [...new Set(trades.map(trade => trade.asset))];
+    filterAsset.innerHTML = '<option value="">جميع الأصول</option>';
+    assets.forEach(asset => {
+        filterAsset.innerHTML += `<option value="${asset}">${asset}</option>`;
     });
 }
 
@@ -201,6 +256,7 @@ function loadUserTrades() {
         renderTrades();
         updateStats();
         renderCalendar();
+        updateFilterOptions();
     }
 }
 
@@ -284,8 +340,25 @@ function renderTrades() {
         return;
     }
     
+    // تطبيق الفلاتر
+    let filteredTrades = [...trades];
+    if (filterAsset.value) {
+        filteredTrades = filteredTrades.filter(trade => trade.asset === filterAsset.value);
+    }
+    if (filterSession.value) {
+        filteredTrades = filteredTrades.filter(trade => trade.session === filterSession.value);
+    }
+    if (filterResult.value) {
+        filteredTrades = filteredTrades.filter(trade => trade.result === filterResult.value);
+    }
+    
+    if (filteredTrades.length === 0) {
+        transactionsList.innerHTML = '<p class="no-transactions">لا توجد صفقات تطابق معايير البحث.</p>';
+        return;
+    }
+    
     // ترتيب الصفقات من الأحدث إلى الأقدم
-    const sortedTrades = [...trades].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sortedTrades = filteredTrades.sort((a, b) => new Date(b.date) - new Date(a.date));
     
     let html = `
         <table>
@@ -294,9 +367,11 @@ function renderTrades() {
                     <th>التاريخ</th>
                     <th>الأصل</th>
                     <th>النوع</th>
+                    <th>الجلسة</th>
                     <th>القيمة ($)</th>
                     <th>النتيجة</th>
                     <th>الربح/الخسارة ($)</th>
+                    <th>ملاحظات</th>
                     <th>الإجراء</th>
                 </tr>
             </thead>
@@ -306,15 +381,18 @@ function renderTrades() {
     sortedTrades.forEach(trade => {
         const resultClass = trade.result === 'ربح' ? 'profit' : 'loss';
         const resultSign = trade.result === 'ربح' ? '+' : '';
+        const sessionClass = `session-${trade.session.toLowerCase()}`;
         
         html += `
             <tr>
-                <td>${formatDate(trade.date)}</td>
+                <td>${formatDateTime(trade.date)}</td>
                 <td>${trade.asset}</td>
                 <td>${trade.type}</td>
+                <td><span class="session-badge ${sessionClass}">${trade.session}</span></td>
                 <td>$${trade.amount.toFixed(2)}</td>
                 <td class="${resultClass}">${trade.result}</td>
                 <td class="${resultClass}">${resultSign}$${trade.profitLoss.toFixed(2)}</td>
+                <td class="notes-cell" title="${trade.notes || 'لا توجد ملاحظات'}">${trade.notes || '-'}</td>
                 <td><button class="delete-btn" onclick="deleteTrade(${trade.id})"><i class="fas fa-trash"></i> حذف</button></td>
             </tr>
         `;
@@ -333,6 +411,42 @@ function updateStats() {
     const totalProfitLoss = trades.reduce((sum, trade) => sum + trade.profitLoss, 0);
     const averageTrade = totalTrades > 0 ? (totalProfitLoss / totalTrades).toFixed(2) : 0;
     
+    // حساب أفضل جلسة
+    const sessionProfits = {};
+    trades.forEach(trade => {
+        if (!sessionProfits[trade.session]) {
+            sessionProfits[trade.session] = 0;
+        }
+        sessionProfits[trade.session] += trade.profitLoss;
+    });
+    
+    let bestSession = '-';
+    let bestSessionProfit = -Infinity;
+    Object.keys(sessionProfits).forEach(session => {
+        if (sessionProfits[session] > bestSessionProfit) {
+            bestSession = session;
+            bestSessionProfit = sessionProfits[session];
+        }
+    });
+    
+    // حساب أفضل أصل
+    const assetProfits = {};
+    trades.forEach(trade => {
+        if (!assetProfits[trade.asset]) {
+            assetProfits[trade.asset] = 0;
+        }
+        assetProfits[trade.asset] += trade.profitLoss;
+    });
+    
+    let bestAsset = '-';
+    let bestAssetProfit = -Infinity;
+    Object.keys(assetProfits).forEach(asset => {
+        if (assetProfits[asset] > bestAssetProfit) {
+            bestAsset = asset;
+            bestAssetProfit = assetProfits[asset];
+        }
+    });
+    
     totalTradesEl.textContent = totalTrades;
     winningTradesEl.textContent = winningTrades;
     losingTradesEl.textContent = losingTrades;
@@ -343,6 +457,180 @@ function updateStats() {
     
     averageTradeEl.textContent = `$${averageTrade}`;
     averageTradeEl.className = averageTrade >= 0 ? 'stat-value positive' : 'stat-value negative';
+    
+    bestSessionEl.textContent = bestSession;
+    bestAssetEl.textContent = bestAsset;
+}
+
+// تحديث الرسوم البيانية
+function updateCharts() {
+    if (trades.length === 0) return;
+    
+    // تدمير المخططات القديمة إذا كانت موجودة
+    if (winLossChart) winLossChart.destroy();
+    if (sessionChart) sessionChart.destroy();
+    if (assetChart) assetChart.destroy();
+    if (profitChart) profitChart.destroy();
+    
+    // مخطط الربح/الخسارة
+    const winLossCtx = document.getElementById('winLossChart').getContext('2d');
+    const winCount = trades.filter(t => t.result === 'ربح').length;
+    const lossCount = trades.filter(t => t.result === 'خسارة').length;
+    
+    winLossChart = new Chart(winLossCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['صفقات رابحة', 'صفقات خاسرة'],
+            datasets: [{
+                data: [winCount, lossCount],
+                backgroundColor: ['#27ae60', '#e74c3c'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    rtl: true
+                },
+                title: {
+                    display: true,
+                    text: 'توزيع الصفقات'
+                }
+            }
+        }
+    });
+    
+    // مخطط الجلسات
+    const sessionCtx = document.getElementById('sessionChart').getContext('2d');
+    const sessionData = {};
+    trades.forEach(trade => {
+        if (!sessionData[trade.session]) {
+            sessionData[trade.session] = { profit: 0, count: 0 };
+        }
+        sessionData[trade.session].profit += trade.profitLoss;
+        sessionData[trade.session].count++;
+    });
+    
+    sessionChart = new Chart(sessionCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(sessionData),
+            datasets: [{
+                label: 'صافي الربح ($)',
+                data: Object.values(sessionData).map(s => s.profit),
+                backgroundColor: ['#3498db', '#2ecc71', '#e74c3c', '#f39c12'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'الأداء حسب الجلسة'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // مخطط الأصول
+    const assetCtx = document.getElementById('assetChart').getContext('2d');
+    const assetData = {};
+    trades.forEach(trade => {
+        if (!assetData[trade.asset]) {
+            assetData[trade.asset] = 0;
+        }
+        assetData[trade.asset] += trade.profitLoss;
+    });
+    
+    // نأخذ أفضل 5 أصول فقط
+    const topAssets = Object.entries(assetData)
+        .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+        .slice(0, 5);
+    
+    assetChart = new Chart(assetCtx, {
+        type: 'pie',
+        data: {
+            labels: topAssets.map(a => a[0]),
+            datasets: [{
+                data: topAssets.map(a => a[1]),
+                backgroundColor: ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    rtl: true
+                },
+                title: {
+                    display: true,
+                    text: 'الأداء حسب الأصل'
+                }
+            }
+        }
+    });
+    
+    // مخطط تطور الأرباح
+    const profitCtx = document.getElementById('profitChart').getContext('2d');
+    const sortedTradesByDate = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let runningTotal = 0;
+    const profitData = [];
+    const dates = [];
+    
+    sortedTradesByDate.forEach(trade => {
+        runningTotal += trade.profitLoss;
+        profitData.push(runningTotal);
+        dates.push(formatDate(trade.date));
+    });
+    
+    profitChart = new Chart(profitCtx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'إجمالي الأرباح ($)',
+                data: profitData,
+                borderColor: '#27ae60',
+                backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    rtl: true
+                },
+                title: {
+                    display: true,
+                    text: 'تطور الأرباح عبر الزمن'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
 }
 
 // حذف صفقة
@@ -353,11 +641,17 @@ function deleteTrade(id) {
         renderTrades();
         updateStats();
         renderCalendar();
+        updateFilterOptions();
+        
+        // تحديث الرسوم البيانية إذا كانت مرئية
+        if (document.getElementById('charts-tab').classList.contains('active')) {
+            updateCharts();
+        }
         
         // إذا كانت الصفقة المحذوفة هي من اليوم المحدد، قم بتحديث التفاصيل
         if (selectedDate) {
             const dateStr = selectedDate.toISOString().split('T')[0];
-            const dayTrades = trades.filter(trade => trade.date === dateStr);
+            const dayTrades = trades.filter(trade => trade.date.startsWith(dateStr));
             
             if (dayTrades.length === 0) {
                 dayDetails.classList.remove('active');
@@ -372,6 +666,18 @@ function deleteTrade(id) {
 function formatDate(dateString) {
     const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
     return new Date(dateString).toLocaleDateString('ar-EG', options);
+}
+
+// تنسيق التاريخ والوقت
+function formatDateTime(dateTimeString) {
+    const options = { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    return new Date(dateTimeString).toLocaleDateString('ar-EG', options);
 }
 
 // عرض التقويم
@@ -407,7 +713,7 @@ function renderCalendar() {
     const currentDay = new Date(firstDayOfGrid);
     while (currentDay <= lastDayOfGrid) {
         const dateStr = currentDay.toISOString().split('T')[0];
-        const dayTrades = trades.filter(trade => trade.date === dateStr);
+        const dayTrades = trades.filter(trade => trade.date.startsWith(dateStr));
         
         const isCurrentMonth = currentDay.getMonth() === currentDate.getMonth();
         const isToday = currentDay.toDateString() === new Date().toDateString();
@@ -466,7 +772,7 @@ function renderCalendar() {
 // عرض تفاصيل الصفقات ليوم معين
 function showDayDetails(date) {
     const dateStr = date.toISOString().split('T')[0];
-    const dayTrades = trades.filter(trade => trade.date === dateStr);
+    const dayTrades = trades.filter(trade => trade.date.startsWith(dateStr));
     
     // تحديث عنوان اليوم المحدد
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -497,14 +803,18 @@ function showDayDetails(date) {
         dayTrades.forEach(trade => {
             const resultClass = trade.result === 'ربح' ? 'profit' : 'loss';
             const resultSign = trade.result === 'ربح' ? '+' : '';
+            const sessionClass = `session-${trade.session.toLowerCase()}`;
             
             html += `
                 <div class="trade-item">
                     <div>
                         <strong>${trade.asset}</strong> - ${trade.type}
+                        <br><span class="session-badge ${sessionClass}">${trade.session}</span>
+                        <br><small>${formatDateTime(trade.date)}</small>
                     </div>
                     <div class="${resultClass}">
                         ${resultSign}$${trade.profitLoss.toFixed(2)}
+                        ${trade.notes ? `<br><small>${trade.notes}</small>` : ''}
                     </div>
                 </div>
             `;
