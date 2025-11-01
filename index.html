@@ -21,8 +21,10 @@
                 </div>
                 <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
             </div>
-            <h1><i class="fas fa-chart-line"></i> سجل صفقات التداول المتكامل</h1>
-            <p>أداة متكاملة لتسجيل وتحليل أداء صفقاتك في التداول</p>
+            <div class="header-content">
+                <h1><i class="fas fa-chart-line"></i> سجل صفقات التداول المتكامل</h1>
+                <p>أداة متكاملة لتسجيل وتحليل أداء صفقاتك في التداول</p>
+            </div>
         </header>
         
         <section class="auth-section" id="authSection">
@@ -75,7 +77,7 @@
 
                     <div class="form-group">
                         <label for="initialCapital">رأس المال الابتدائي ($)</label>
-                        <input type="number" id="initialCapital" placeholder="أدخل رأس المال الذي ستبدأ به" min="0" step="0.01" required>
+                        <input type="number" id="initialCapital" placeholder="أدخل رأس المال الذي ستبدأ به" min="0" step="0.01" value="1000" required>
                     </div>
                     
                     <button type="submit"><i class="fas fa-user-plus"></i> إنشاء حساب</button>
@@ -110,98 +112,104 @@
                     <section class="form-section">
                         <h2><i class="fas fa-plus-circle"></i> إضافة صفقة جديدة</h2>
                         <form id="tradeForm">
-                            <div class="form-group">
-                                <label for="tradeDate">تاريخ الصفقة</label>
-                                <input type="datetime-local" id="tradeDate" required>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tradeDate">تاريخ الصفقة</label>
+                                    <input type="datetime-local" id="tradeDate" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="asset">الأصل المتداول</label>
+                                    <select id="asset" required>
+                                        <option value="">اختر الأصل</option>
+                                        <!-- العملات الرقمية -->
+                                        <option value="BTC">Bitcoin (BTC)</option>
+                                        <option value="ETH">Ethereum (ETH)</option>
+                                        <option value="BNB">Binance Coin (BNB)</option>
+                                        <option value="XRP">Ripple (XRP)</option>
+                                        <option value="ADA">Cardano (ADA)</option>
+                                        <option value="SOL">Solana (SOL)</option>
+                                        <option value="DOT">Polkadot (DOT)</option>
+                                        <option value="DOGE">Dogecoin (DOGE)</option>
+                                        <option value="AVAX">Avalanche (AVAX)</option>
+                                        <option value="MATIC">Polygon (MATIC)</option>
+                                        
+                                        <!-- السلع -->
+                                        <option value="GOLD">الذهب</option>
+                                        <option value="SILVER">الفضة</option>
+                                        <option value="OIL">النفط</option>
+                                        <option value="GAS">الغاز الطبيعي</option>
+                                        <option value="COPPER">النحاس</option>
+                                        <option value="PLATINUM">البلاتين</option>
+                                        
+                                        <!-- أزواج العملات -->
+                                        <option value="EUR/USD">يورو/دولار</option>
+                                        <option value="GBP/USD">جنيه إسترليني/دولار</option>
+                                        <option value="USD/JPY">دولار/ين ياباني</option>
+                                        <option value="USD/CHF">دولار/فرنك سويسري</option>
+                                        <option value="AUD/USD">دولار أسترالي/دولار</option>
+                                        <option value="USD/CAD">دولار/دولار كندي</option>
+                                        <option value="NZD/USD">دولار نيوزيلندي/دولار</option>
+                                        
+                                        <!-- المؤشرات -->
+                                        <option value="S&P500">S&P 500</option>
+                                        <option value="DOW30">Dow Jones 30</option>
+                                        <option value="NASDAQ">NASDAQ</option>
+                                        <option value="FTSE100">FTSE 100</option>
+                                        <option value="DAX30">DAX 30</option>
+                                        <option value="NIKKEI225">Nikkei 225</option>
+                                        
+                                        <!-- الأسهم -->
+                                        <option value="AAPL">Apple (AAPL)</option>
+                                        <option value="TSLA">Tesla (TSLA)</option>
+                                        <option value="AMZN">Amazon (AMZN)</option>
+                                        <option value="GOOGL">Google (GOOGL)</option>
+                                        <option value="MSFT">Microsoft (MSFT)</option>
+                                        <option value="META">Meta (META)</option>
+                                        <option value="NFLX">Netflix (NFLX)</option>
+                                        <option value="NVDA">NVIDIA (NVDA)</option>
+                                        
+                                        <option value="other">أخرى</option>
+                                    </select>
+                                    <input type="text" id="otherAsset" placeholder="اذكر الأصل" style="display: none; margin-top: 5px;">
+                                </div>
                             </div>
-                            
-                            <div class="form-group">
-                                <label for="asset">الأصل المتداول</label>
-                                <select id="asset" required>
-                                    <option value="">اختر الأصل</option>
-                                    <!-- العملات الرقمية -->
-                                    <option value="BTC">Bitcoin (BTC)</option>
-                                    <option value="ETH">Ethereum (ETH)</option>
-                                    <option value="BNB">Binance Coin (BNB)</option>
-                                    <option value="XRP">Ripple (XRP)</option>
-                                    <option value="ADA">Cardano (ADA)</option>
-                                    <option value="SOL">Solana (SOL)</option>
-                                    <option value="DOT">Polkadot (DOT)</option>
-                                    <option value="DOGE">Dogecoin (DOGE)</option>
-                                    <option value="AVAX">Avalanche (AVAX)</option>
-                                    <option value="MATIC">Polygon (MATIC)</option>
-                                    
-                                    <!-- السلع -->
-                                    <option value="GOLD">الذهب</option>
-                                    <option value="SILVER">الفضة</option>
-                                    <option value="OIL">النفط</option>
-                                    <option value="GAS">الغاز الطبيعي</option>
-                                    <option value="COPPER">النحاس</option>
-                                    <option value="PLATINUM">البلاتين</option>
-                                    
-                                    <!-- أزواج العملات -->
-                                    <option value="EUR/USD">يورو/دولار</option>
-                                    <option value="GBP/USD">جنيه إسترليني/دولار</option>
-                                    <option value="USD/JPY">دولار/ين ياباني</option>
-                                    <option value="USD/CHF">دولار/فرنك سويسري</option>
-                                    <option value="AUD/USD">دولار أسترالي/دولار</option>
-                                    <option value="USD/CAD">دولار/دولار كندي</option>
-                                    <option value="NZD/USD">دولار نيوزيلندي/دولار</option>
-                                    
-                                    <!-- المؤشرات -->
-                                    <option value="S&P500">S&P 500</option>
-                                    <option value="DOW30">Dow Jones 30</option>
-                                    <option value="NASDAQ">NASDAQ</option>
-                                    <option value="FTSE100">FTSE 100</option>
-                                    <option value="DAX30">DAX 30</option>
-                                    <option value="NIKKEI225">Nikkei 225</option>
-                                    
-                                    <!-- الأسهم -->
-                                    <option value="AAPL">Apple (AAPL)</option>
-                                    <option value="TSLA">Tesla (TSLA)</option>
-                                    <option value="AMZN">Amazon (AMZN)</option>
-                                    <option value="GOOGL">Google (GOOGL)</option>
-                                    <option value="MSFT">Microsoft (MSFT)</option>
-                                    <option value="META">Meta (META)</option>
-                                    <option value="NFLX">Netflix (NFLX)</option>
-                                    <option value="NVDA">NVIDIA (NVDA)</option>
-                                    
-                                    <option value="other">أخرى</option>
-                                </select>
-                                <input type="text" id="otherAsset" placeholder="اذكر الأصل" style="display: none; margin-top: 5px;">
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tradeType">نوع الصفقة</label>
+                                    <select id="tradeType" required>
+                                        <option value="شراء">شراء</option>
+                                        <option value="بيع">بيع</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="session">جلسة التداول</label>
+                                    <select id="session" required>
+                                        <option value="آسيا">جلسة آسيا</option>
+                                        <option value="لندن">جلسة لندن</option>
+                                        <option value="نيويورك">جلسة نيويورك</option>
+                                        <option value="أخرى">جلسة أخرى</option>
+                                    </select>
+                                </div>
                             </div>
-                            
-                            <div class="form-group">
-                                <label for="tradeType">نوع الصفقة</label>
-                                <select id="tradeType" required>
-                                    <option value="شراء">شراء</option>
-                                    <option value="بيع">بيع</option>
-                                </select>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="amount">قيمة الصفقة ($)</label>
+                                    <input type="number" id="amount" placeholder="أدخل المبلغ بالدولار" min="0" step="0.01" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="result">نتيجة الصفقة</label>
+                                    <select id="result" required>
+                                        <option value="ربح">ربح</option>
+                                        <option value="خسارة">خسارة</option>
+                                    </select>
+                                </div>
                             </div>
-                            
-                            <div class="form-group">
-                                <label for="session">جلسة التداول</label>
-                                <select id="session" required>
-                                    <option value="آسيا">جلسة آسيا</option>
-                                    <option value="لندن">جلسة لندن</option>
-                                    <option value="نيويورك">جلسة نيويورك</option>
-                                    <option value="أخرى">جلسة أخرى</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="amount">قيمة الصفقة ($)</label>
-                                <input type="number" id="amount" placeholder="أدخل المبلغ بالدولار" min="0" step="0.01" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="result">نتيجة الصفقة</label>
-                                <select id="result" required>
-                                    <option value="ربح">ربح</option>
-                                    <option value="خسارة">خسارة</option>
-                                </select>
-                            </div>
-                            
+
                             <div class="form-group">
                                 <label for="profitLoss">قيمة الربح/الخسارة ($)</label>
                                 <input type="number" id="profitLoss" placeholder="أدخل قيمة الربح/الخسارة" step="0.01" required>
@@ -209,7 +217,12 @@
                             
                             <div class="form-group">
                                 <label for="tradeImage">صورة الصفقة (اختياري)</label>
-                                <input type="file" id="tradeImage" accept="image/*" class="file-input">
+                                <div class="file-input-container">
+                                    <input type="file" id="tradeImage" accept="image/*" class="file-input">
+                                    <label for="tradeImage" class="file-input-label">
+                                        <i class="fas fa-upload"></i> اختر صورة
+                                    </label>
+                                </div>
                                 <div class="image-preview" id="imagePreview" style="display: none;">
                                     <img id="previewImage" src="#" alt="معاينة الصورة">
                                     <button type="button" id="removeImageBtn" class="delete-btn"><i class="fas fa-times"></i></button>
@@ -221,7 +234,7 @@
                                 <textarea id="notes" placeholder="أضف ملاحظاتك حول الصفقة، استراتيجية الدخول والخروج، الدروس المستفادة..." rows="3"></textarea>
                             </div>
                             
-                            <button type="submit"><i class="fas fa-save"></i> إضافة الصفقة</button>
+                            <button type="submit" class="submit-btn"><i class="fas fa-save"></i> إضافة الصفقة</button>
                         </form>
                     </section>
                     
@@ -243,42 +256,50 @@
                         </div>
                         <div class="stats-grid">
                             <div class="stat-card">
-                                <div>إجمالي الصفقات</div>
+                                <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
+                                <div class="stat-label">إجمالي الصفقات</div>
                                 <div class="stat-value" id="totalTrades">0</div>
                             </div>
                             
                             <div class="stat-card">
-                                <div>الصفقات الرابحة</div>
+                                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                                <div class="stat-label">الصفقات الرابحة</div>
                                 <div class="stat-value positive" id="winningTrades">0</div>
                             </div>
                             
                             <div class="stat-card">
-                                <div>الصفقات الخاسرة</div>
+                                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                                <div class="stat-label">الصفقات الخاسرة</div>
                                 <div class="stat-value negative" id="losingTrades">0</div>
                             </div>
                             
                             <div class="stat-card">
-                                <div>نسبة النجاح</div>
+                                <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                                <div class="stat-label">نسبة النجاح</div>
                                 <div class="stat-value" id="successRate">0%</div>
                             </div>
                             
                             <div class="stat-card">
-                                <div>متوسط الربح</div>
+                                <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+                                <div class="stat-label">متوسط الربح</div>
                                 <div class="stat-value" id="averageProfit">$0</div>
                             </div>
                             
                             <div class="stat-card">
-                                <div>متوسط الخسارة</div>
+                                <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
+                                <div class="stat-label">متوسط الخسارة</div>
                                 <div class="stat-value" id="averageLoss">$0</div>
                             </div>
                             
                             <div class="stat-card">
-                                <div>أفضل جلسة</div>
+                                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                                <div class="stat-label">أفضل جلسة</div>
                                 <div class="stat-value" id="bestSession">-</div>
                             </div>
                             
                             <div class="stat-card">
-                                <div>أفضل أصل</div>
+                                <div class="stat-icon"><i class="fas fa-coins"></i></div>
+                                <div class="stat-label">أفضل أصل</div>
                                 <div class="stat-value" id="bestAsset">-</div>
                             </div>
                         </div>
@@ -367,18 +388,22 @@
                     <h2><i class="fas fa-tachometer-alt"></i> أداء رأس المال</h2>
                     <div class="performance-stats">
                         <div class="performance-card">
+                            <div class="performance-icon"><i class="fas fa-wallet"></i></div>
                             <h3>رأس المال الابتدائي</h3>
                             <div class="performance-value" id="initialCapitalDisplay">$0</div>
                         </div>
                         <div class="performance-card">
+                            <div class="performance-icon"><i class="fas fa-chart-line"></i></div>
                             <h3>رأس المال الحالي</h3>
                             <div class="performance-value" id="currentCapitalDisplay">$0</div>
                         </div>
                         <div class="performance-card">
+                            <div class="performance-icon"><i class="fas fa-money-bill-wave"></i></div>
                             <h3>صافي الربح/الخسارة</h3>
                             <div class="performance-value" id="netPnLDisplay">$0</div>
                         </div>
                         <div class="performance-card">
+                            <div class="performance-icon"><i class="fas fa-percentage"></i></div>
                             <h3>نسبة العودة</h3>
                             <div class="performance-value" id="roiDisplay">0%</div>
                         </div>
