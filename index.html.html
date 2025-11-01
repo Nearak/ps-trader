@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل صفقات التداول - نظام المستخدمين</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="user-info" id="userInfo" style="display: none;">
+                <span id="userGreeting">مرحباً، </span>
+                <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+            </div>
+            <h1>سجل صفقات التداول - نظام المستخدمين</h1>
+            <p>سجل وتحليل أداء صفقاتك في التداول</p>
+        </header>
+        
+        <section class="auth-section" id="authSection">
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-form="login">تسجيل الدخول</div>
+                <div class="auth-tab" data-form="register">إنشاء حساب</div>
+            </div>
+            
+            <div class="auth-form active" id="loginForm">
+                <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
+                <div class="alert" id="loginAlert"></div>
+                <form id="loginUserForm">
+                    <div class="form-group">
+                        <label for="loginEmail">البريد الإلكتروني</label>
+                        <input type="email" id="loginEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="loginPassword">كلمة المرور</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    
+                    <button type="submit"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
+                </form>
+            </div>
+            
+            <div class="auth-form" id="registerForm">
+                <h2><i class="fas fa-user-plus"></i> إنشاء حساب جديد</h2>
+                <div class="alert" id="registerAlert"></div>
+                <form id="registerUserForm">
+                    <div class="form-group">
+                        <label for="registerName">الاسم الكامل</label>
+                        <input type="text" id="registerName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerEmail">البريد الإلكتروني</label>
+                        <input type="email" id="registerEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerPassword">كلمة المرور</label>
+                        <input type="password" id="registerPassword" minlength="6" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerConfirmPassword">تأكيد كلمة المرور</label>
+                        <input type="password" id="registerConfirmPassword" required>
+                    </div>
+                    
+                    <button type="submit"><i class="fas fa-user-plus"></i> إنشاء حساب</button>
+                </form>
+            </div>
+        </section>
+        
+        <div class="app-content" id="appContent">
+            <div class="tabs">
+                <div class="tab active" data-tab="form">إضافة صفقة</div>
+                <div class="tab" data-tab="calendar">تقويم الصفقات</div>
+                <div class="tab" data-tab="list">قائمة الصفقات</div>
+            </div>
+            
+            <div class="tab-content active" id="form-tab">
+                <div class="main-content">
+                    <section class="form-section">
+                        <h2><i class="fas fa-plus-circle"></i> إضافة صفقة جديدة</h2>
+                        <form id="tradeForm">
+                            <div class="form-group">
+                                <label for="tradeDate">تاريخ الصفقة</label>
+                                <input type="date" id="tradeDate" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="asset">الأصل المتداول</label>
+                                <input type="text" id="asset" placeholder="مثال: BTC, ETH, Gold" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="tradeType">نوع الصفقة</label>
+                                <select id="tradeType" required>
+                                    <option value="شراء">شراء</option>
+                                    <option value="بيع">بيع</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="amount">قيمة الصفقة ($)</label>
+                                <input type="number" id="amount" placeholder="أدخل المبلغ بالدولار" min="0" step="0.01" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="result">نتيجة الصفقة</label>
+                                <select id="result" required>
+                                    <option value="ربح">ربح</option>
+                                    <option value="خسارة">خسارة</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="profitLoss">قيمة الربح/الخسارة ($)</label>
+                                <input type="number" id="profitLoss" placeholder="أدخل قيمة الربح/الخسارة" step="0.01" required>
+                            </div>
+                            
+                            <button type="submit"><i class="fas fa-save"></i> إضافة الصفقة</button>
+                        </form>
+                    </section>
+                    
+                    <section class="stats-section">
+                        <h2><i class="fas fa-chart-line"></i> إحصائيات التداول</h2>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div>إجمالي الصفقات</div>
+                                <div class="stat-value" id="totalTrades">0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div>الصفقات الرابحة</div>
+                                <div class="stat-value positive" id="winningTrades">0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div>الصفقات الخاسرة</div>
+                                <div class="stat-value negative" id="losingTrades">0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div>نسبة النجاح</div>
+                                <div class="stat-value" id="successRate">0%</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div>إجمالي الربح/الخسارة</div>
+                                <div class="stat-value" id="totalProfitLoss">$0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div>متوسط الصفقة</div>
+                                <div class="stat-value" id="averageTrade">$0</div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="calendar-tab">
+                <section class="calendar-section">
+                    <h2><i class="fas fa-calendar-alt"></i> تقويم الصفقات</h2>
+                    <div class="calendar-header">
+                        <h3 id="calendar-month-year">شهر سنة</h3>
+                        <div class="calendar-nav">
+                            <button id="prev-month"><i class="fas fa-chevron-right"></i> الشهر السابق</button>
+                            <button id="current-month">الشهر الحالي</button>
+                            <button id="next-month">الشهر التالي <i class="fas fa-chevron-left"></i></button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid" id="calendar-days">
+                        <!-- سيتم ملء التقويم بالجافاسكريبت -->
+                    </div>
+                    <div class="day-details" id="day-details">
+                        <h3 id="selected-day">تفاصيل الصفقات ليوم</h3>
+                        <div class="day-trades" id="day-trades-list">
+                            <!-- سيتم ملء تفاصيل الصفقات بالجافاسكريبت -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="tab-content" id="list-tab">
+                <section class="transactions-section">
+                    <h2><i class="fas fa-list"></i> سجل الصفقات</h2>
+                    <div id="transactionsList">
+                        <p class="no-transactions">لا توجد صفقات مسجلة بعد. ابدأ بإضافة أول صفقة.</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+trading-journal/
+├── index.html
+├── README.md
+├── .nojekyll
+├── assets/
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── app.js
+└── CNAME (اختياري - إذا كان لديك نطاق مخصص)
