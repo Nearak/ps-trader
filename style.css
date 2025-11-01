@@ -52,7 +52,38 @@ header {
     transform: translateY(-50%);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.capital-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(52, 152, 219, 0.1);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+}
+
+#editCapitalBtn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 2px;
+    width: auto;
+}
+
+#editCapitalBtn:hover {
+    background: none;
+    transform: scale(1.1);
 }
 
 .user-info button {
@@ -80,6 +111,72 @@ h1 {
 h1 i {
     color: var(--primary-color);
     margin-left: 10px;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 25px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+.image-modal {
+    max-width: 90%;
+    max-height: 90%;
+    margin: 5% auto;
+}
+
+.image-modal img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+}
+
+.close {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    width: auto;
+    background: none;
+}
+
+.close:hover {
+    color: var(--danger-color);
+    background: none;
+    transform: none;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .auth-section {
@@ -187,7 +284,7 @@ h1 i {
     }
 }
 
-.form-section, .stats-section, .calendar-section, .charts-section, .transactions-section {
+.form-section, .stats-section, .calendar-section, .charts-section, .transactions-section, .performance-section {
     background: rgba(255, 255, 255, 0.95);
     padding: 25px;
     border-radius: 15px;
@@ -196,11 +293,11 @@ h1 i {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.calendar-section, .charts-section {
+.calendar-section, .charts-section, .performance-section {
     grid-column: 1 / -1;
 }
 
-.charts-grid {
+.charts-grid, .performance-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 20px;
@@ -214,10 +311,75 @@ h1 i {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.chart-container.full-width {
+    grid-column: 1 / -1;
+}
+
 .chart-container h3 {
     margin-bottom: 15px;
     text-align: center;
     color: var(--secondary-color);
+}
+
+.capital-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.capital-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--primary-color);
+}
+
+.capital-label {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    margin-bottom: 8px;
+}
+
+.capital-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.performance-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.performance-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: var(--transition);
+}
+
+.performance-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.performance-card h3 {
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+.performance-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color);
 }
 
 .calendar-header {
@@ -352,7 +514,7 @@ label {
     color: var(--secondary-color);
 }
 
-input, select, textarea, button {
+input, select, textarea, button, .file-input {
     width: 100%;
     padding: 12px;
     border: 1px solid #ddd;
@@ -365,6 +527,40 @@ input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.file-input {
+    padding: 10px;
+    background: white;
+    cursor: pointer;
+}
+
+.file-input:hover {
+    border-color: var(--primary-color);
+}
+
+.image-preview {
+    position: relative;
+    margin-top: 10px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 5px;
+}
+
+#removeImageBtn {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: auto;
+    padding: 5px 8px;
+    background: var(--danger-color);
 }
 
 textarea {
@@ -571,6 +767,24 @@ tr:hover {
     color: #f57c00;
 }
 
+.image-cell {
+    text-align: center;
+}
+
+.trade-image {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.trade-image:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -587,9 +801,15 @@ tr:hover {
         justify-content: center;
         margin-bottom: 15px;
         transform: none;
+        flex-direction: column;
+        gap: 10px;
     }
     
-    .stats-grid {
+    .user-details {
+        align-items: center;
+    }
+    
+    .stats-grid, .capital-stats, .performance-stats {
         grid-template-columns: 1fr;
     }
     
@@ -603,7 +823,7 @@ tr:hover {
         justify-content: center;
     }
     
-    .charts-grid {
+    .charts-grid, .performance-grid {
         grid-template-columns: 1fr;
     }
     
@@ -622,6 +842,18 @@ tr:hover {
     
     .tab:last-child {
         border-bottom: none;
+    }
+    
+    .transactions-section .filters {
+        flex-direction: column;
+    }
+    
+    table {
+        font-size: 0.9rem;
+    }
+    
+    th, td {
+        padding: 8px 10px;
     }
 }
 
