@@ -101,6 +101,8 @@
 
             <div class="tabs">
                 <div class="tab active" data-tab="form">إضافة صفقة</div>
+                <div class="tab" data-tab="strategy">استراتيجيتي</div>
+                <div class="tab" data-tab="leaderboard">لوحة المتصدرين</div>
                 <div class="tab" data-tab="charts">الرسوم البيانية</div>
                 <div class="tab" data-tab="calendar">تقويم الصفقات</div>
                 <div class="tab" data-tab="list">قائمة الصفقات</div>
@@ -307,6 +309,195 @@
                 </div>
             </div>
             
+            <div class="tab-content" id="strategy-tab">
+                <section class="strategy-section">
+                    <h2><i class="fas fa-chess-knight"></i> استراتيجية التداول الخاصة بي</h2>
+                    <div class="strategy-intro">
+                        <p>هنا يمكنك كتابة وتطوير استراتيجية التداول الخاصة بك. استخدم هذه المساحة لتحديد قواعد الدخول والخروج، إدارة المخاطر، والأهداف.</p>
+                    </div>
+                    
+                    <div class="strategy-form">
+                        <div class="form-group">
+                            <label for="strategyTitle">عنوان الاستراتيجية</label>
+                            <input type="text" id="strategyTitle" placeholder="أدخل عنواناً لاستراتيجيتك">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tradingStyle">نمط التداول</label>
+                            <select id="tradingStyle">
+                                <option value="">اختر نمط التداول</option>
+                                <option value="scalping">سكالبينج (Scalping)</option>
+                                <option value="day">تداول يومي (Day Trading)</option>
+                                <option value="swing">تداول أرجوحي (Swing Trading)</option>
+                                <option value="position">تداول مراكز (Position Trading)</option>
+                                <option value="investing">استثمار طويل الأجل</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="timeframe">الإطار الزمني المفضل</label>
+                            <select id="timeframe">
+                                <option value="">اختر الإطار الزمني</option>
+                                <option value="1m">1 دقيقة</option>
+                                <option value="5m">5 دقائق</option>
+                                <option value="15m">15 دقيقة</option>
+                                <option value="1h">1 ساعة</option>
+                                <option value="4h">4 ساعات</option>
+                                <option value="1d">يومي</option>
+                                <option value="1w">أسبوعي</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="riskPerTrade">نسبة المخاطرة لكل صفقة (%)</label>
+                            <input type="number" id="riskPerTrade" min="0" max="100" step="0.1" placeholder="مثال: 2">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rewardRatio">نسبة العائد للمخاطرة</label>
+                            <input type="number" id="rewardRatio" min="0" step="0.1" placeholder="مثال: 2 (يعني 2:1)">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="entryRules">قواعد الدخول</label>
+                            <textarea id="entryRules" placeholder="صف شروط الدخول إلى الصفقات..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="exitRules">قواعد الخروج</label>
+                            <textarea id="exitRules" placeholder="صف شروط الخروج من الصفقات..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="riskManagement">إدارة المخاطر</label>
+                            <textarea id="riskManagement" placeholder="صف استراتيجية إدارة المخاطر..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="psychologyNotes">ملاحظات نفسية</label>
+                            <textarea id="psychologyNotes" placeholder="اكتب ملاحظات حول الجانب النفسي في التداول..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="strategyNotes">ملاحظات إضافية</label>
+                            <textarea id="strategyNotes" placeholder="أي ملاحظات إضافية حول الاستراتيجية..." rows="4"></textarea>
+                        </div>
+                        
+                        <button id="saveStrategyBtn" class="submit-btn"><i class="fas fa-save"></i> حفظ الاستراتيجية</button>
+                    </div>
+                    
+                    <div class="strategy-preview" id="strategyPreview">
+                        <h3><i class="fas fa-eye"></i> معاينة الاستراتيجية</h3>
+                        <div class="preview-content" id="previewContent">
+                            <p class="no-preview">لم يتم حفظ استراتيجية بعد. املأ النموذج أعلاه واحفظ استراتيجيتك.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="tab-content" id="leaderboard-tab">
+                <section class="leaderboard-section">
+                    <h2><i class="fas fa-trophy"></i> لوحة المتصدرين</h2>
+                    <div class="leaderboard-intro">
+                        <p>تصنيف المتداولين بناءً على أدائهم. يمكنك مقارنة أدائك مع الآخرين وتحفيز نفسك للتحسين.</p>
+                    </div>
+                    
+                    <div class="leaderboard-filters">
+                        <div class="filter-group">
+                            <label for="leaderboardType">نوع التصنيف:</label>
+                            <select id="leaderboardType">
+                                <option value="winRate">أعلى نسبة فوز</option>
+                                <option value="totalProfit">أعلى إجمالي أرباح</option>
+                                <option value="roi">أعلى عائد على الاستثمار</option>
+                                <option value="consistency">أعلى معدل اتساق</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="timePeriod">الفترة الزمنية:</label>
+                            <select id="timePeriod">
+                                <option value="all">جميع الفترات</option>
+                                <option value="month">آخر شهر</option>
+                                <option value="week">آخر أسبوع</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="leaderboard-stats">
+                        <div class="user-rank-card">
+                            <div class="rank-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="rank-info">
+                                <h3>تصنيفك الحالي</h3>
+                                <div class="rank-value" id="userRank">-</div>
+                                <div class="rank-details" id="userRankDetails">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="leaderboard-container">
+                        <div class="leaderboard-header">
+                            <div class="rank-col">المركز</div>
+                            <div class="name-col">المتداول</div>
+                            <div class="stats-col">نسبة الفوز</div>
+                            <div class="stats-col">إجمالي الأرباح</div>
+                            <div class="stats-col">العائد</div>
+                        </div>
+                        <div class="leaderboard-list" id="leaderboardList">
+                            <div class="no-data">جاري تحميل البيانات...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="achievements-section">
+                        <h3><i class="fas fa-award"></i> الإنجازات</h3>
+                        <div class="achievements-grid" id="achievementsGrid">
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-rocket"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>المتداول المبتدئ</h4>
+                                    <p>إكمال 10 صفقات</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 30%"></div>
+                                    </div>
+                                    <span class="progress-text">3/10</span>
+                                </div>
+                            </div>
+                            
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>محترف الربح</h4>
+                                    <p>تحقيق $1000 ربح</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 15%"></div>
+                                    </div>
+                                    <span class="progress-text">$150/$1000</span>
+                                </div>
+                            </div>
+                            
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>مدير المخاطر</h4>
+                                    <p>نسبة فوز 70% أو أكثر</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 45%"></div>
+                                    </div>
+                                    <span class="progress-text">45%/70%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
             <div class="tab-content" id="charts-tab">
                 <section class="charts-section">
                     <h2><i class="fas fa-chart-bar"></i> الرسوم البيانية والإحصائيات</h2>
@@ -337,16 +528,27 @@
             <div class="tab-content" id="calendar-tab">
                 <section class="calendar-section">
                     <h2><i class="fas fa-calendar-alt"></i> تقويم الصفقات</h2>
-                    <div class="calendar-header">
-                        <h3 id="calendar-month-year">شهر سنة</h3>
-                        <div class="calendar-nav">
-                            <button id="prev-month"><i class="fas fa-chevron-right"></i> الشهر السابق</button>
-                            <button id="current-month">الشهر الحالي</button>
-                            <button id="next-month">الشهر التالي <i class="fas fa-chevron-left"></i></button>
+                    <div class="calendar-controls">
+                        <div class="calendar-header">
+                            <h3 id="calendar-month-year">شهر سنة</h3>
+                            <div class="calendar-nav">
+                                <button id="prev-month"><i class="fas fa-chevron-right"></i> الشهر السابق</button>
+                                <button id="current-month">الشهر الحالي</button>
+                                <button id="next-month">الشهر التالي <i class="fas fa-chevron-left"></i></button>
+                            </div>
+                        </div>
+                        <div class="calendar-view-toggle">
+                            <button class="view-btn active" data-view="month">عرض شهري</button>
+                            <button class="view-btn" data-view="week">عرض أسبوعي</button>
                         </div>
                     </div>
-                    <div class="calendar-grid" id="calendar-days">
-                        <!-- سيتم ملء التقويم بالجافاسكريبت -->
+                    <div class="calendar-view">
+                        <div class="calendar-grid" id="calendar-days">
+                            <!-- سيتم ملء التقويم بالجافاسكريبت -->
+                        </div>
+                        <div class="week-view" id="week-view" style="display: none;">
+                            <!-- سيتم ملء العرض الأسبوعي بالجافاسكريبت -->
+                        </div>
                     </div>
                     <div class="day-details" id="day-details">
                         <h3 id="selected-day">تفاصيل الصفقات ليوم</h3>
