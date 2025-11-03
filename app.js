@@ -8,6 +8,7 @@ let trades = [];
 // متغيرات التقويم
 let currentDate = new Date();
 let selectedDate = null;
+let calendarView = 'month'; // 'month' or 'week'
 
 // عناصر DOM
 const authSection = document.getElementById('authSection');
@@ -37,6 +38,7 @@ const calendarMonthYear = document.getElementById('calendar-month-year');
 const dayDetails = document.getElementById('day-details');
 const selectedDayEl = document.getElementById('selected-day');
 const dayTradesList = document.getElementById('day-trades-list');
+const weekView = document.getElementById('week-view');
 
 // عناصر الإحصائيات
 const totalTradesEl = document.getElementById('totalTrades');
@@ -81,15 +83,41 @@ const modalImage = document.getElementById('modalImage');
 const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 const currentMonthBtn = document.getElementById('current-month');
+const viewButtons = document.querySelectorAll('.view-btn');
 
 // عناصر الرسم البياني
 let winLossChart, sessionChart, assetChart, profitChart, capitalChart, monthlyTradesChart, monthlySuccessChart;
+
+// عناصر صفحة الاستراتيجية
+const saveStrategyBtn = document.getElementById('saveStrategyBtn');
+const strategyTitle = document.getElementById('strategyTitle');
+const tradingStyle = document.getElementById('tradingStyle');
+const timeframe = document.getElementById('timeframe');
+const riskPerTrade = document.getElementById('riskPerTrade');
+const rewardRatio = document.getElementById('rewardRatio');
+const entryRules = document.getElementById('entryRules');
+const exitRules = document.getElementById('exitRules');
+const riskManagement = document.getElementById('riskManagement');
+const psychologyNotes = document.getElementById('psychologyNotes');
+const strategyNotes = document.getElementById('strategyNotes');
+const previewContent = document.getElementById('previewContent');
+
+// عناصر صفحة لوحة المتصدرين
+const leaderboardType = document.getElementById('leaderboardType');
+const timePeriod = document.getElementById('timePeriod');
+const userRank = document.getElementById('userRank');
+const userRankDetails = document.getElementById('userRankDetails');
+const leaderboardList = document.getElementById('leaderboardList');
+const achievementsGrid = document.getElementById('achievementsGrid');
 
 // تهيئة التطبيق
 function initApp() {
     if (currentUser) {
         showApp();
         loadUserTrades();
+        loadUserStrategy();
+        updateLeaderboard();
+        updateAchievements();
     } else {
         showAuth();
     }
@@ -121,6 +149,17 @@ function setupEventListeners() {
             if (tabId === 'charts' || tabId === 'performance') {
                 setTimeout(updateCharts, 100);
             }
+            
+            // إذا كان التبويب هو لوحة المتصدرين، قم بتحديثها
+            if (tabId === 'leaderboard') {
+                updateLeaderboard();
+                updateAchievements();
+            }
+            
+            // إذا كان التبويب هو الاستراتيجية، قم بتحميلها
+            if (tabId === 'strategy') {
+                loadUserStrategy();
+            }
         });
     });
     
@@ -138,6 +177,16 @@ function setupEventListeners() {
     currentMonthBtn.addEventListener('click', function() {
         currentDate = new Date();
         renderCalendar();
+    });
+    
+    // أحداث تغيير عرض التقويم
+    viewButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            viewButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            calendarView = this.getAttribute('data-view');
+            renderCalendar();
+        });
     });
     
     // إدارة حقل الأصل الآخر
@@ -279,6 +328,23 @@ function setupEventListeners() {
         imagePreview.style.display = 'none';
         previewImage.src = '#';
     });
+    
+    // أحداث صفحة الاستراتيجية
+    saveStrategyBtn.addEventListener('click', saveUserStrategy);
+    
+    // تحديث معاينة الاستراتيجية عند تغيير الحقول
+    const strategyFields = [strategyTitle, tradingStyle, timeframe, riskPerTrade, rewardRatio, 
+                          entryRules, exitRules, riskManagement, psychologyNotes, strategyNotes];
+    
+    strategyFields.forEach(field => {
+        if (field) {
+            field.addEventListener('input', updateStrategyPreview);
+        }
+    });
+    
+    // أحداث صفحة لوحة المتصدرين
+    leaderboardType.addEventListener('change', updateLeaderboard);
+    timePeriod.addEventListener('change', updateLeaderboard);
 }
 
 // تحديث خيارات الفلتر
@@ -303,6 +369,9 @@ function handleLogin(e) {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         showApp();
         loadUserTrades();
+        loadUserStrategy();
+        updateLeaderboard();
+        updateAchievements();
         showAlert(loginAlert, 'تم تسجيل الدخول بنجاح!', 'success');
     } else {
         showAlert(loginAlert, 'البريد الإلكتروني أو كلمة المرور غير صحيحة', 'error');
@@ -342,7 +411,8 @@ function handleRegister(e) {
         name, 
         password, 
         capital: initialCapital,
-        trades: [] 
+        trades: [],
+        strategy: {}
     };
     localStorage.setItem('users', JSON.stringify(users));
     
@@ -389,6 +459,307 @@ function saveUserTrades() {
         users[currentUser.email].trades = trades;
         localStorage.setItem('users', JSON.stringify(users));
     }
+}
+
+// تحميل استراتيجية المستخدم
+function loadUserStrategy() {
+    if (currentUser && users[currentUser.email] && users[currentUser.email].strategy) {
+        const strategy = users[currentUser.email].strategy;
+        
+        if (strategyTitle) strategyTitle.value = strategy.title || '';
+        if (tradingStyle) tradingStyle.value = strategy.tradingStyle || '';
+        if (timeframe) timeframe.value = strategy.timeframe || '';
+        if (riskPerTrade) riskPerTrade.value = strategy.riskPerTrade || '';
+        if (rewardRatio) rewardRatio.value = strategy.rewardRatio || '';
+        if (entryRules) entryRules.value = strategy.entryRules || '';
+        if (exitRules) exitRules.value = strategy.exitRules || '';
+        if (riskManagement) riskManagement.value = strategy.riskManagement || '';
+        if (psychologyNotes) psychologyNotes.value = strategy.psychologyNotes || '';
+        if (strategyNotes) strategyNotes.value = strategy.strategyNotes || '';
+        
+        updateStrategyPreview();
+    }
+}
+
+// حفظ استراتيجية المستخدم
+function saveUserStrategy() {
+    if (currentUser && users[currentUser.email]) {
+        const strategy = {
+            title: strategyTitle.value,
+            tradingStyle: tradingStyle.value,
+            timeframe: timeframe.value,
+            riskPerTrade: riskPerTrade.value,
+            rewardRatio: rewardRatio.value,
+            entryRules: entryRules.value,
+            exitRules: exitRules.value,
+            riskManagement: riskManagement.value,
+            psychologyNotes: psychologyNotes.value,
+            strategyNotes: strategyNotes.value,
+            lastUpdated: new Date().toISOString()
+        };
+        
+        if (!users[currentUser.email].strategy) {
+            users[currentUser.email].strategy = {};
+        }
+        
+        users[currentUser.email].strategy = strategy;
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        showAlert(loginAlert, 'تم حفظ الاستراتيجية بنجاح!', 'success');
+        updateStrategyPreview();
+    }
+}
+
+// تحديث معاينة الاستراتيجية
+function updateStrategyPreview() {
+    if (!previewContent) return;
+    
+    const title = strategyTitle.value || 'استراتيجية التداول';
+    const tradingStyleText = tradingStyle.options[tradingStyle.selectedIndex]?.text || 'غير محدد';
+    const timeframeText = timeframe.options[timeframe.selectedIndex]?.text || 'غير محدد';
+    const riskPerTradeText = riskPerTrade.value ? `${riskPerTrade.value}%` : 'غير محدد';
+    const rewardRatioText = rewardRatio.value ? `${rewardRatio.value}:1` : 'غير محدد';
+    
+    let html = `
+        <div class="strategy-preview-content">
+            <h4>${title}</h4>
+            <div class="preview-grid">
+                <div class="preview-item">
+                    <strong>نمط التداول:</strong> ${tradingStyleText}
+                </div>
+                <div class="preview-item">
+                    <strong>الإطار الزمني:</strong> ${timeframeText}
+                </div>
+                <div class="preview-item">
+                    <strong>نسبة المخاطرة:</strong> ${riskPerTradeText}
+                </div>
+                <div class="preview-item">
+                    <strong>نسبة العائد للمخاطرة:</strong> ${rewardRatioText}
+                </div>
+            </div>
+    `;
+    
+    if (entryRules.value) {
+        html += `
+            <div class="preview-section">
+                <h5>قواعد الدخول:</h5>
+                <p>${entryRules.value}</p>
+            </div>
+        `;
+    }
+    
+    if (exitRules.value) {
+        html += `
+            <div class="preview-section">
+                <h5>قواعد الخروج:</h5>
+                <p>${exitRules.value}</p>
+            </div>
+        `;
+    }
+    
+    if (riskManagement.value) {
+        html += `
+            <div class="preview-section">
+                <h5>إدارة المخاطر:</h5>
+                <p>${riskManagement.value}</p>
+            </div>
+        `;
+    }
+    
+    if (psychologyNotes.value) {
+        html += `
+            <div class="preview-section">
+                <h5>ملاحظات نفسية:</h5>
+                <p>${psychologyNotes.value}</p>
+            </div>
+        `;
+    }
+    
+    if (strategyNotes.value) {
+        html += `
+            <div class="preview-section">
+                <h5>ملاحظات إضافية:</h5>
+                <p>${strategyNotes.value}</p>
+            </div>
+        `;
+    }
+    
+    html += `</div>`;
+    
+    previewContent.innerHTML = html;
+}
+
+// تحديث لوحة المتصدرين
+function updateLeaderboard() {
+    if (!leaderboardList) return;
+    
+    const type = leaderboardType.value;
+    const period = timePeriod.value;
+    
+    // تحضير بيانات المستخدمين للتصنيف
+    const leaderboardData = [];
+    
+    Object.keys(users).forEach(email => {
+        const user = users[email];
+        if (user.trades && user.trades.length > 0) {
+            const userTrades = filterTradesByPeriod(user.trades, period);
+            const totalTrades = userTrades.length;
+            const winningTrades = userTrades.filter(t => t.result === 'ربح').length;
+            const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+            const totalProfit = userTrades.reduce((sum, trade) => sum + trade.profitLoss, 0);
+            const capital = user.capital || 1000;
+            const roi = capital > 0 ? (totalProfit / capital) * 100 : 0;
+            
+            leaderboardData.push({
+                name: user.name,
+                email: email,
+                totalTrades: totalTrades,
+                winRate: winRate,
+                totalProfit: totalProfit,
+                roi: roi,
+                isCurrentUser: email === currentUser.email
+            });
+        }
+    });
+    
+    // ترتيب البيانات حسب نوع التصنيف
+    if (type === 'winRate') {
+        leaderboardData.sort((a, b) => b.winRate - a.winRate);
+    } else if (type === 'totalProfit') {
+        leaderboardData.sort((a, b) => b.totalProfit - a.totalProfit);
+    } else if (type === 'roi') {
+        leaderboardData.sort((a, b) => b.roi - a.roi);
+    } else if (type === 'consistency') {
+        // حساب الاتساق (نسبة الفوز مع مراعاة عدد الصفقات)
+        leaderboardData.sort((a, b) => {
+            const aScore = a.winRate * Math.min(a.totalTrades / 10, 1);
+            const bScore = b.winRate * Math.min(b.totalTrades / 10, 1);
+            return bScore - aScore;
+        });
+    }
+    
+    // تحديث تصنيف المستخدم الحالي
+    const currentUserIndex = leaderboardData.findIndex(user => user.isCurrentUser);
+    if (currentUserIndex !== -1) {
+        userRank.textContent = `#${currentUserIndex + 1}`;
+        const currentUserData = leaderboardData[currentUserIndex];
+        userRankDetails.textContent = `نسبة فوز: ${currentUserData.winRate.toFixed(1)}% | أرباح: $${currentUserData.totalProfit.toFixed(2)}`;
+    } else {
+        userRank.textContent = 'غير مصنف';
+        userRankDetails.textContent = 'أضف صفقات لتدخل التصنيف';
+    }
+    
+    // عرض لوحة المتصدرين
+    if (leaderboardData.length === 0) {
+        leaderboardList.innerHTML = '<div class="no-data">لا توجد بيانات كافية لعرض التصنيف</div>';
+        return;
+    }
+    
+    let html = '';
+    leaderboardData.slice(0, 10).forEach((user, index) => {
+        const rankClass = `rank-${index + 1}`;
+        const userClass = user.isCurrentUser ? 'current-user' : '';
+        
+        html += `
+            <div class="leaderboard-item ${userClass}">
+                <div class="rank ${rankClass}">${index + 1}</div>
+                <div class="user-name">${user.name} ${user.isCurrentUser ? '(أنت)' : ''}</div>
+                <div class="stat-value">${user.winRate.toFixed(1)}%</div>
+                <div class="stat-value ${user.totalProfit >= 0 ? 'positive' : 'negative'}">$${user.totalProfit.toFixed(2)}</div>
+                <div class="stat-value ${user.roi >= 0 ? 'positive' : 'negative'}">${user.roi.toFixed(1)}%</div>
+            </div>
+        `;
+    });
+    
+    leaderboardList.innerHTML = html;
+}
+
+// تصفية الصفقات حسب الفترة الزمنية
+function filterTradesByPeriod(trades, period) {
+    const now = new Date();
+    let startDate;
+    
+    if (period === 'week') {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else if (period === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    } else {
+        // جميع الفترات
+        return trades;
+    }
+    
+    return trades.filter(trade => new Date(trade.date) >= startDate);
+}
+
+// تحديث الإنجازات
+function updateAchievements() {
+    if (!achievementsGrid) return;
+    
+    const userData = users[currentUser.email];
+    if (!userData || !userData.trades) return;
+    
+    const totalTrades = userData.trades.length;
+    const winningTrades = userData.trades.filter(t => t.result === 'ربح').length;
+    const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+    const totalProfit = userData.trades.reduce((sum, trade) => sum + trade.profitLoss, 0);
+    
+    // إنجاز المتداول المبتدئ
+    const beginnerProgress = Math.min((totalTrades / 10) * 100, 100);
+    const beginnerUnlocked = totalTrades >= 10;
+    
+    // إنجاز محترف الربح
+    const profitProgress = Math.min((totalProfit / 1000) * 100, 100);
+    const profitUnlocked = totalProfit >= 1000;
+    
+    // إنجاز مدير المخاطر
+    const riskProgress = Math.min((winRate / 70) * 100, 100);
+    const riskUnlocked = winRate >= 70;
+    
+    let html = `
+        <div class="achievement-card ${beginnerUnlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-icon">
+                <i class="fas fa-rocket"></i>
+            </div>
+            <div class="achievement-info">
+                <h4>المتداول المبتدئ</h4>
+                <p>إكمال 10 صفقات</p>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${beginnerProgress}%"></div>
+                </div>
+                <span class="progress-text">${totalTrades}/10</span>
+            </div>
+        </div>
+        
+        <div class="achievement-card ${profitUnlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="achievement-info">
+                <h4>محترف الربح</h4>
+                <p>تحقيق $1000 ربح</p>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${profitProgress}%"></div>
+                </div>
+                <span class="progress-text">$${Math.min(totalProfit, 1000).toFixed(0)}/$1000</span>
+            </div>
+        </div>
+        
+        <div class="achievement-card ${riskUnlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="achievement-info">
+                <h4>مدير المخاطر</h4>
+                <p>نسبة فوز 70% أو أكثر</p>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${riskProgress}%"></div>
+                </div>
+                <span class="progress-text">${winRate.toFixed(1)}%/70%</span>
+            </div>
+        </div>
+    `;
+    
+    achievementsGrid.innerHTML = html;
 }
 
 // تحديث معلومات رأس المال
@@ -971,6 +1342,12 @@ function deleteTrade(id) {
             setTimeout(updateCharts, 100);
         }
         
+        // تحديث لوحة المتصدرين إذا كانت مرئية
+        if (document.getElementById('leaderboard-tab').classList.contains('active')) {
+            updateLeaderboard();
+            updateAchievements();
+        }
+        
         // إذا كانت الصفقة المحذوفة هي من اليوم المحدد، قم بتحديث التفاصيل
         if (selectedDate) {
             const dateStr = selectedDate.toISOString().split('T')[0];
@@ -1005,6 +1382,18 @@ function formatDateTime(dateTimeString) {
 
 // عرض التقويم
 function renderCalendar() {
+    if (calendarView === 'month') {
+        renderMonthCalendar();
+    } else {
+        renderWeekCalendar();
+    }
+}
+
+// عرض التقويم الشهري
+function renderMonthCalendar() {
+    calendarDays.style.display = 'grid';
+    weekView.style.display = 'none';
+    
     // تحديد أول وآخر يوم من الشهر
     const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -1080,6 +1469,94 @@ function renderCalendar() {
             
             // إزالة التحديد من جميع الأيام
             document.querySelectorAll('.calendar-day').forEach(d => {
+                d.classList.remove('selected');
+            });
+            
+            // إضافة التحديد لليوم المحدد
+            this.classList.add('selected');
+            
+            // عرض تفاصيل اليوم
+            showDayDetails(selectedDate);
+        });
+    });
+}
+
+// عرض التقويم الأسبوعي
+function renderWeekCalendar() {
+    calendarDays.style.display = 'none';
+    weekView.style.display = 'block';
+    
+    // تحديد بداية الأسبوع (الأحد)
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+    
+    // تحديث العنوان
+    const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+        "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+    ];
+    calendarMonthYear.textContent = `أسبوع ${startOfWeek.getDate()} - ${monthNames[startOfWeek.getMonth()]} ${startOfWeek.getFullYear()}`;
+    
+    let weekHTML = '';
+    const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    
+    // إضافة أيام الأسبوع
+    for (let i = 0; i < 7; i++) {
+        const day = new Date(startOfWeek);
+        day.setDate(startOfWeek.getDate() + i);
+        const dateStr = day.toISOString().split('T')[0];
+        const dayTrades = trades.filter(trade => trade.date.startsWith(dateStr));
+        
+        const isToday = day.toDateString() === new Date().toDateString();
+        const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
+        
+        let dayClass = 'week-day';
+        if (isToday) dayClass += ' today';
+        if (isSelected) dayClass += ' selected';
+        if (dayTrades.length > 0) dayClass += ' has-trades';
+        
+        // حساب إجمالي الربح/الخسارة لهذا اليوم
+        const dayProfitLoss = dayTrades.reduce((sum, trade) => sum + trade.profitLoss, 0);
+        
+        weekHTML += `
+            <div class="${dayClass}" data-date="${dateStr}">
+                <div class="week-day-header">
+                    <div class="week-day-name">${dayNames[i]}</div>
+                    <div class="week-day-date">${day.getDate()} ${monthNames[day.getMonth()]}</div>
+                </div>
+                <div class="week-day-trades">
+                    ${dayTrades.length > 0 ? `
+                        <div class="trade-count">${dayTrades.length} صفقة</div>
+                        <div class="day-profit ${dayProfitLoss >= 0 ? 'profit' : 'loss'}">
+                            ${dayProfitLoss >= 0 ? '+' : ''}$${dayProfitLoss.toFixed(2)}
+                        </div>
+                        <div class="trades-list">
+                            ${dayTrades.map(trade => `
+                                <div class="week-trade-item">
+                                    <span class="trade-asset">${trade.asset}</span>
+                                    <span class="trade-result ${trade.result === 'ربح' ? 'profit' : 'loss'}">
+                                        ${trade.result === 'ربح' ? '+' : ''}$${trade.profitLoss.toFixed(2)}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="no-trades">لا توجد صفقات</div>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+    
+    weekView.innerHTML = weekHTML;
+    
+    // إضافة مستمعي الأحداث لأيام الأسبوع
+    document.querySelectorAll('.week-day').forEach(day => {
+        day.addEventListener('click', function() {
+            const dateStr = this.getAttribute('data-date');
+            selectedDate = new Date(dateStr);
+            
+            // إزالة التحديد من جميع الأيام
+            document.querySelectorAll('.week-day').forEach(d => {
                 d.classList.remove('selected');
             });
             
