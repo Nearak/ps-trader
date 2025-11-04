@@ -6,1410 +6,637 @@
     <title>سجل صفقات التداول - النظام المتكامل</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --primary-color: #4361ee;
-            --primary-dark: #3a0ca3;
-            --primary-light: #4cc9f0;
-            --secondary-color: #7209b7;
-            --success-color: #4bb543;
-            --danger-color: #e74c3c;
-            --warning-color: #f39c12;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-            --gray-light: #e9ecef;
-            --gray-medium: #adb5bd;
-            --transition: all 0.3s ease;
-            --border-radius: 12px;
-            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            --box-shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: #f5f7fb;
-            color: var(--dark-color);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        header {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            padding: 20px 0;
-            border-radius: 0 0 var(--border-radius) var(--border-radius);
-            box-shadow: var(--box-shadow);
-            margin-bottom: 30px;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .header-content h1 {
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header-content p {
-            opacity: 0.9;
-            font-size: 1rem;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            background: rgba(255, 255, 255, 0.15);
-            padding: 12px 20px;
-            border-radius: var(--border-radius);
-            backdrop-filter: blur(10px);
-        }
-
-        .user-details {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .capital-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-        }
-
-        .capital-info button {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: var(--transition);
-        }
-
-        .capital-info button:hover {
-            color: var(--primary-light);
-        }
-
-        #logoutBtn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        #logoutBtn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        /* تصميم المصادقة */
-        .auth-section {
-            max-width: 500px;
-            margin: 50px auto;
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow-lg);
-            overflow: hidden;
-        }
-
-        .auth-tabs {
-            display: flex;
-            background: var(--gray-light);
-        }
-
-        .auth-tab {
-            flex: 1;
-            text-align: center;
-            padding: 15px;
-            cursor: pointer;
-            transition: var(--transition);
-            font-weight: 600;
-        }
-
-        .auth-tab.active {
-            background: white;
-            color: var(--primary-color);
-            border-bottom: 3px solid var(--primary-color);
-        }
-
-        .auth-form {
-            padding: 30px;
-            display: none;
-        }
-
-        .auth-form.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .auth-form h2 {
-            margin-bottom: 20px;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--dark-color);
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid var(--gray-medium);
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: var(--transition);
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
-            outline: none;
-        }
-
-        button {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        button:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-
-        .submit-btn {
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .alert {
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .alert-success {
-            background: rgba(75, 181, 67, 0.15);
-            color: var(--success-color);
-            border: 1px solid rgba(75, 181, 67, 0.3);
-        }
-
-        .alert-error {
-            background: rgba(231, 76, 60, 0.15);
-            color: var(--danger-color);
-            border: 1px solid rgba(231, 76, 60, 0.3);
-        }
-
-        /* تصميم المحتوى الرئيسي */
-        .app-content {
-            display: none;
-        }
-
-        .tabs {
-            display: flex;
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            margin-bottom: 25px;
-            overflow-x: auto;
-            padding: 5px;
-        }
-
-        .tab {
-            padding: 15px 20px;
-            cursor: pointer;
-            transition: var(--transition);
-            white-space: nowrap;
-            border-radius: 8px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .tab.active {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .tab:hover:not(.active) {
-            background: var(--gray-light);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-        }
-
-        @media (max-width: 992px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .form-section,
-        .stats-section,
-        .strategy-section,
-        .leaderboard-section,
-        .charts-section,
-        .calendar-section,
-        .transactions-section,
-        .performance-section {
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            padding: 25px;
-            margin-bottom: 25px;
-        }
-
-        .form-section h2,
-        .stats-section h2,
-        .strategy-section h2,
-        .leaderboard-section h2,
-        .charts-section h2,
-        .calendar-section h2,
-        .transactions-section h2,
-        .performance-section h2 {
-            margin-bottom: 20px;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 1px solid var(--gray-light);
-            padding-bottom: 10px;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .file-input-container {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .file-input {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-
-        .file-input-label {
-            display: block;
-            padding: 12px 15px;
-            background: var(--gray-light);
-            border: 1px dashed var(--gray-medium);
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .file-input-label:hover {
-            background: var(--primary-light);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .image-preview {
-            margin-top: 15px;
-            position: relative;
-            display: inline-block;
-        }
-
-        .image-preview img {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 8px;
-            box-shadow: var(--box-shadow);
-        }
-
-        .delete-btn {
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            background: var(--danger-color);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        /* تصميم الإحصائيات */
-        .capital-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        @media (max-width: 768px) {
-            .capital-stats {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .capital-card {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            padding: 20px;
-            border-radius: var(--border-radius);
-            text-align: center;
-            box-shadow: var(--box-shadow);
-        }
-
-        .capital-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-            margin-bottom: 10px;
-        }
-
-        .capital-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .capital-value.positive {
-            color: var(--success-color);
-        }
-
-        .capital-value.negative {
-            color: var(--danger-color);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-        }
-
-        @media (max-width: 992px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 20px;
-            text-align: center;
-            box-shadow: var(--box-shadow);
-            transition: var(--transition);
-            border: 1px solid var(--gray-light);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--box-shadow-lg);
-        }
-
-        .stat-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-            color: var(--primary-color);
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--gray-medium);
-            margin-bottom: 8px;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .stat-value.positive {
-            color: var(--success-color);
-        }
-
-        .stat-value.negative {
-            color: var(--danger-color);
-        }
-
-        /* تصميم الاستراتيجية */
-        .strategy-intro {
-            margin-bottom: 25px;
-            padding: 15px;
-            background: rgba(67, 97, 238, 0.05);
-            border-radius: var(--border-radius);
-            border-right: 4px solid var(--primary-color);
-        }
-
-        .strategy-form {
-            margin-bottom: 30px;
-        }
-
-        .strategy-preview {
-            border: 1px solid var(--gray-light);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            background: #f9fafc;
-        }
-
-        .preview-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .preview-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .preview-section {
-            margin-bottom: 20px;
-        }
-
-        .preview-section h5 {
-            margin-bottom: 8px;
-            color: var(--primary-dark);
-        }
-
-        .preview-section p {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 3px solid var(--primary-color);
-        }
-
-        /* تصميم لوحة المتصدرين */
-        .leaderboard-intro {
-            margin-bottom: 25px;
-            padding: 15px;
-            background: rgba(114, 9, 183, 0.05);
-            border-radius: var(--border-radius);
-            border-right: 4px solid var(--secondary-color);
-        }
-
-        .leaderboard-filters {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .filter-group label {
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .leaderboard-stats {
-            margin-bottom: 25px;
-        }
-
-        .user-rank-card {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            padding: 20px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-        }
-
-        .rank-icon {
-            font-size: 2.5rem;
-        }
-
-        .rank-info h3 {
-            margin-bottom: 5px;
-        }
-
-        .rank-value {
-            font-size: 2rem;
-            font-weight: 700;
-        }
-
-        .leaderboard-container {
-            border: 1px solid var(--gray-light);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
-
-        .leaderboard-header {
-            display: grid;
-            grid-template-columns: 80px 1fr repeat(3, 120px);
-            background: var(--primary-color);
-            color: white;
-            padding: 15px;
-            font-weight: 600;
-        }
-
-        @media (max-width: 768px) {
-            .leaderboard-header {
-                grid-template-columns: 60px 1fr repeat(3, 1fr);
-                font-size: 0.8rem;
-            }
-        }
-
-        .leaderboard-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .leaderboard-item {
-            display: grid;
-            grid-template-columns: 80px 1fr repeat(3, 120px);
-            padding: 15px;
-            border-bottom: 1px solid var(--gray-light);
-            transition: var(--transition);
-        }
-
-        @media (max-width: 768px) {
-            .leaderboard-item {
-                grid-template-columns: 60px 1fr repeat(3, 1fr);
-                font-size: 0.8rem;
-            }
-        }
-
-        .leaderboard-item:hover {
-            background: #f8f9fa;
-        }
-
-        .leaderboard-item.current-user {
-            background: rgba(67, 97, 238, 0.1);
-            border-right: 3px solid var(--primary-color);
-        }
-
-        .rank {
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: var(--gray-light);
-        }
-
-        .rank-1 {
-            background: gold;
-            color: var(--dark-color);
-        }
-
-        .rank-2 {
-            background: silver;
-            color: var(--dark-color);
-        }
-
-        .rank-3 {
-            background: #cd7f32;
-            color: white;
-        }
-
-        .achievements-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-
-        @media (max-width: 992px) {
-            .achievements-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .achievements-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .achievement-card {
-            border: 1px solid var(--gray-light);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            display: flex;
-            gap: 15px;
-            transition: var(--transition);
-        }
-
-        .achievement-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--box-shadow);
-        }
-
-        .achievement-card.locked {
-            opacity: 0.7;
-        }
-
-        .achievement-card.unlocked {
-            border-color: var(--success-color);
-            background: rgba(75, 181, 67, 0.05);
-        }
-
-        .achievement-icon {
-            font-size: 2rem;
-            color: var(--primary-color);
-        }
-
-        .achievement-card.unlocked .achievement-icon {
-            color: var(--success-color);
-        }
-
-        .achievement-info h4 {
-            margin-bottom: 5px;
-        }
-
-        .achievement-info p {
-            font-size: 0.9rem;
-            color: var(--gray-medium);
-            margin-bottom: 10px;
-        }
-
-        .progress-bar {
-            height: 8px;
-            background: var(--gray-light);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 5px;
-        }
-
-        .progress {
-            height: 100%;
-            background: var(--primary-color);
-            transition: width 0.5s ease;
-        }
-
-        .achievement-card.unlocked .progress {
-            background: var(--success-color);
-        }
-
-        .progress-text {
-            font-size: 0.8rem;
-            color: var(--gray-medium);
-        }
-
-        /* تصميم الرسوم البيانية */
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-        }
-
-        @media (max-width: 992px) {
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .chart-container {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 20px;
-            box-shadow: var(--box-shadow);
-        }
-
-        .chart-container h3 {
-            margin-bottom: 15px;
-            color: var(--primary-dark);
-            text-align: center;
-        }
-
-        .chart-container canvas {
-            max-height: 300px;
-        }
-
-        .full-width {
-            grid-column: 1 / -1;
-        }
-
-        .performance-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-        }
-
-        @media (max-width: 768px) {
-            .performance-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .performance-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        @media (max-width: 992px) {
-            .performance-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .performance-stats {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .performance-card {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 25px;
-            text-align: center;
-            box-shadow: var(--box-shadow);
-            transition: var(--transition);
-        }
-
-        .performance-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--box-shadow-lg);
-        }
-
-        .performance-icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            color: var(--primary-color);
-        }
-
-        .performance-card h3 {
-            margin-bottom: 10px;
-            font-size: 1rem;
-            color: var(--dark-color);
-        }
-
-        .performance-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-        }
-
-        .performance-value.positive {
-            color: var(--success-color);
-        }
-
-        .performance-value.negative {
-            color: var(--danger-color);
-        }
-
-        /* تصميم التقويم */
-        .calendar-controls {
-            margin-bottom: 25px;
-        }
-
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .calendar-header h3 {
-            color: var(--primary-dark);
-        }
-
-        .calendar-nav {
-            display: flex;
-            gap: 10px;
-        }
-
-        .calendar-view-toggle {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .view-btn {
-            background: var(--gray-light);
-            color: var(--dark-color);
-        }
-
-        .view-btn.active {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .calendar-view {
-            margin-bottom: 25px;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 1px;
-            background: var(--gray-light);
-            border: 1px solid var(--gray-light);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-        }
-
-        .calendar-day-header {
-            background: var(--primary-color);
-            color: white;
-            padding: 15px 10px;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .calendar-day {
-            background: white;
-            padding: 10px;
-            min-height: 100px;
-            cursor: pointer;
-            transition: var(--transition);
-            border-bottom: 1px solid var(--gray-light);
-        }
-
-        .calendar-day:hover {
-            background: #f8f9fa;
-        }
-
-        .calendar-day.other-month {
-            background: #f8f9fa;
-            color: var(--gray-medium);
-        }
-
-        .calendar-day.has-trades {
-            border-right: 3px solid var(--primary-color);
-        }
-
-        .calendar-day.selected {
-            background: rgba(67, 97, 238, 0.1);
-            border-right: 3px solid var(--primary-dark);
-        }
-
-        .day-number {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
-        .today-indicator {
-            color: var(--primary-color);
-            font-weight: bold;
-        }
-
-        .trade-summary {
-            font-size: 0.8rem;
-        }
-
-        .trade-summary .profit {
-            color: var(--success-color);
-            font-weight: 600;
-        }
-
-        .trade-summary .loss {
-            color: var(--danger-color);
-            font-weight: 600;
-        }
-
-        .week-view {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 15px;
-        }
-
-        @media (max-width: 992px) {
-            .week-view {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .week-view {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .week-day {
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            overflow: hidden;
-            transition: var(--transition);
-        }
-
-        .week-day:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--box-shadow-lg);
-        }
-
-        .week-day.selected {
-            border: 2px solid var(--primary-color);
-        }
-
-        .week-day.today {
-            border: 2px solid var(--warning-color);
-        }
-
-        .week-day-header {
-            background: var(--primary-color);
-            color: white;
-            padding: 15px;
-            text-align: center;
-        }
-
-        .week-day-trades {
-            padding: 15px;
-        }
-
-        .trade-count {
-            font-weight: 600;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .day-profit {
-            text-align: center;
-            font-weight: 700;
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-        }
-
-        .day-profit.profit {
-            color: var(--success-color);
-        }
-
-        .day-profit.loss {
-            color: var(--danger-color);
-        }
-
-        .trades-list {
-            max-height: 150px;
-            overflow-y: auto;
-        }
-
-        .week-trade-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--gray-light);
-            font-size: 0.9rem;
-        }
-
-        .week-trade-item:last-child {
-            border-bottom: none;
-        }
-
-        .no-trades {
-            text-align: center;
-            color: var(--gray-medium);
-            font-style: italic;
-            padding: 10px 0;
-        }
-
-        .day-details {
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            padding: 25px;
-            display: none;
-        }
-
-        .day-details.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .day-details h3 {
-            margin-bottom: 20px;
-            color: var(--primary-dark);
-            border-bottom: 1px solid var(--gray-light);
-            padding-bottom: 10px;
-        }
-
-        .day-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: var(--border-radius);
-        }
-
-        @media (max-width: 768px) {
-            .day-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .day-stats {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .day-stats div {
-            text-align: center;
-        }
-
-        .trade-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            border-bottom: 1px solid var(--gray-light);
-            transition: var(--transition);
-        }
-
-        .trade-item:hover {
-            background: #f8f9fa;
-        }
-
-        .trade-item:last-child {
-            border-bottom: none;
-        }
-
-        .session-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: white;
-        }
-
-        .session-asia {
-            background: var(--primary-color);
-        }
-
-        .session-لندن {
-            background: var(--secondary-color);
-        }
-
-        .session-نيويورك {
-            background: var(--warning-color);
-        }
-
-        .session-أخرى {
-            background: var(--gray-medium);
-        }
-
-        /* تصميم قائمة الصفقات */
-        .filters {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .filters select {
-            min-width: 150px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--box-shadow);
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: right;
-            border-bottom: 1px solid var(--gray-light);
-        }
-
-        th {
-            background: var(--primary-color);
-            color: white;
-            font-weight: 600;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .profit {
-            color: var(--success-color);
-            font-weight: 600;
-        }
-
-        .loss {
-            color: var(--danger-color);
-            font-weight: 600;
-        }
-
-        .trade-image {
-            width: 50px;
-            height: 50px;
-            object-fit: cover;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .trade-image:hover {
-            transform: scale(1.1);
-        }
-
-        .image-cell, .notes-cell {
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .no-transactions, .no-data, .no-preview {
-            text-align: center;
-            padding: 30px;
-            color: var(--gray-medium);
-            font-style: italic;
-        }
-
-        /* تصميم الـ Modals */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 5% auto;
-            padding: 30px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow-lg);
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-            animation: modalFadeIn 0.3s ease;
-        }
-
-        .image-modal {
-            max-width: 90%;
-            text-align: center;
-        }
-
-        .image-modal img {
-            max-width: 100%;
-            max-height: 70vh;
-            border-radius: var(--border-radius);
-        }
-
-        .close {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            color: var(--gray-medium);
-            font-size: 1.5rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .close:hover {
-            color: var(--danger-color);
-        }
-
-        /* تأثيرات الحركة */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes modalFadeIn {
-            from { 
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to { 
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* تحسينات للشاشات الصغيرة */
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-
-            .user-info {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .tabs {
-                overflow-x: auto;
-                padding: 5px;
-            }
-
-            .tab {
-                padding: 12px 15px;
-                font-size: 0.9rem;
-            }
-
-            .form-section, 
-            .stats-section, 
-            .strategy-section, 
-            .leaderboard-section, 
-            .charts-section, 
-            .calendar-section, 
-            .transactions-section, 
-            .performance-section {
-                padding: 15px;
-            }
-
-            th, td {
-                padding: 8px 10px;
-                font-size: 0.9rem;
-            }
-
-            .calendar-day {
-                min-height: 80px;
-                padding: 5px;
-            }
-
-            .day-number {
-                font-size: 0.9rem;
-            }
-
-            .trade-summary {
-                font-size: 0.7rem;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .container {
-                padding: 0 10px;
-            }
-
-            .auth-form {
-                padding: 20px;
-            }
-
-            .capital-stats, .stats-grid, .performance-stats {
-                grid-template-columns: 1fr;
-            }
-
-            .leaderboard-header, .leaderboard-item {
-                grid-template-columns: 50px 1fr repeat(3, 1fr);
-                font-size: 0.7rem;
-                padding: 10px;
-            }
-
-            .calendar-grid {
-                grid-template-columns: repeat(7, 1fr);
-            }
-
-            .calendar-day-header {
-                padding: 10px 5px;
-                font-size: 0.8rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- سيتم إضافة محتوى HTML هنا -->
-    
-    <script>
-        // سيتم إضافة JavaScript هنا
-    </script>
+    <div class="container">
+        <header>
+            <div class="user-info" id="userInfo" style="display: none;">
+                <div class="user-details">
+                    <span id="userGreeting">مرحباً، </span>
+                    <div class="capital-info">
+                        <span>رأس المال: $<span id="userCapital">0</span></span>
+                        <button id="editCapitalBtn"><i class="fas fa-edit"></i></button>
+                    </div>
+                </div>
+                <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+            </div>
+            <div class="header-content">
+                <h1><i class="fas fa-chart-line"></i> سجل صفقات التداول المتكامل</h1>
+                <p>أداة متكاملة لتسجيل وتحليل أداء صفقاتك في التداول</p>
+            </div>
+        </header>
+        
+        <section class="auth-section" id="authSection">
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-form="login">تسجيل الدخول</div>
+                <div class="auth-tab" data-form="register">إنشاء حساب</div>
+            </div>
+            
+            <div class="auth-form active" id="loginForm">
+                <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
+                <div class="alert" id="loginAlert"></div>
+                <form id="loginUserForm">
+                    <div class="form-group">
+                        <label for="loginEmail">البريد الإلكتروني</label>
+                        <input type="email" id="loginEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="loginPassword">كلمة المرور</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    
+                    <button type="submit"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
+                </form>
+            </div>
+            
+            <div class="auth-form" id="registerForm">
+                <h2><i class="fas fa-user-plus"></i> إنشاء حساب جديد</h2>
+                <div class="alert" id="registerAlert"></div>
+                <form id="registerUserForm">
+                    <div class="form-group">
+                        <label for="registerName">الاسم الكامل</label>
+                        <input type="text" id="registerName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerEmail">البريد الإلكتروني</label>
+                        <input type="email" id="registerEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerPassword">كلمة المرور</label>
+                        <input type="password" id="registerPassword" minlength="6" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerConfirmPassword">تأكيد كلمة المرور</label>
+                        <input type="password" id="registerConfirmPassword" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="initialCapital">رأس المال الابتدائي ($)</label>
+                        <input type="number" id="initialCapital" placeholder="أدخل رأس المال الذي ستبدأ به" min="0" step="0.01" value="1000" required>
+                    </div>
+                    
+                    <button type="submit"><i class="fas fa-user-plus"></i> إنشاء حساب</button>
+                </form>
+            </div>
+        </section>
+        
+        <div class="app-content" id="appContent">
+            <!-- Modal تعديل رأس المال -->
+            <div id="capitalModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h3><i class="fas fa-money-bill-wave"></i> تعديل رأس المال</h3>
+                    <div class="form-group">
+                        <label for="newCapital">رأس المال الجديد ($)</label>
+                        <input type="number" id="newCapital" min="0" step="0.01" required>
+                    </div>
+                    <button id="saveCapitalBtn"><i class="fas fa-save"></i> حفظ التغييرات</button>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="form">إضافة صفقة</div>
+                <div class="tab" data-tab="strategy">استراتيجيتي</div>
+                <div class="tab" data-tab="leaderboard">لوحة المتصدرين</div>
+                <div class="tab" data-tab="charts">الرسوم البيانية</div>
+                <div class="tab" data-tab="calendar">تقويم الصفقات</div>
+                <div class="tab" data-tab="list">قائمة الصفقات</div>
+                <div class="tab" data-tab="performance">أداء رأس المال</div>
+            </div>
+            
+            <div class="tab-content active" id="form-tab">
+                <div class="main-content">
+                    <section class="form-section">
+                        <h2><i class="fas fa-plus-circle"></i> إضافة صفقة جديدة</h2>
+                        <form id="tradeForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tradeDate">تاريخ الصفقة</label>
+                                    <input type="datetime-local" id="tradeDate" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="asset">الأصل المتداول</label>
+                                    <select id="asset" required>
+                                        <option value="">اختر الأصل</option>
+                                        <!-- العملات الرقمية -->
+                                        <option value="BTC">Bitcoin (BTC)</option>
+                                        <option value="ETH">Ethereum (ETH)</option>
+                                        <option value="BNB">Binance Coin (BNB)</option>
+                                        <option value="XRP">Ripple (XRP)</option>
+                                        <option value="ADA">Cardano (ADA)</option>
+                                        <option value="SOL">Solana (SOL)</option>
+                                        <option value="DOT">Polkadot (DOT)</option>
+                                        <option value="DOGE">Dogecoin (DOGE)</option>
+                                        <option value="AVAX">Avalanche (AVAX)</option>
+                                        <option value="MATIC">Polygon (MATIC)</option>
+                                        
+                                        <!-- السلع -->
+                                        <option value="GOLD">الذهب</option>
+                                        <option value="SILVER">الفضة</option>
+                                        <option value="OIL">النفط</option>
+                                        <option value="GAS">الغاز الطبيعي</option>
+                                        <option value="COPPER">النحاس</option>
+                                        <option value="PLATINUM">البلاتين</option>
+                                        
+                                        <!-- أزواج العملات -->
+                                        <option value="EUR/USD">يورو/دولار</option>
+                                        <option value="GBP/USD">جنيه إسترليني/دولار</option>
+                                        <option value="USD/JPY">دولار/ين ياباني</option>
+                                        <option value="USD/CHF">دولار/فرنك سويسري</option>
+                                        <option value="AUD/USD">دولار أسترالي/دولار</option>
+                                        <option value="USD/CAD">دولار/دولار كندي</option>
+                                        <option value="NZD/USD">دولار نيوزيلندي/دولار</option>
+                                        
+                                        <!-- المؤشرات -->
+                                        <option value="S&P500">S&P 500</option>
+                                        <option value="DOW30">Dow Jones 30</option>
+                                        <option value="NASDAQ">NASDAQ</option>
+                                        <option value="FTSE100">FTSE 100</option>
+                                        <option value="DAX30">DAX 30</option>
+                                        <option value="NIKKEI225">Nikkei 225</option>
+                                        
+                                        <!-- الأسهم -->
+                                        <option value="AAPL">Apple (AAPL)</option>
+                                        <option value="TSLA">Tesla (TSLA)</option>
+                                        <option value="AMZN">Amazon (AMZN)</option>
+                                        <option value="GOOGL">Google (GOOGL)</option>
+                                        <option value="MSFT">Microsoft (MSFT)</option>
+                                        <option value="META">Meta (META)</option>
+                                        <option value="NFLX">Netflix (NFLX)</option>
+                                        <option value="NVDA">NVIDIA (NVDA)</option>
+                                        
+                                        <option value="other">أخرى</option>
+                                    </select>
+                                    <input type="text" id="otherAsset" placeholder="اذكر الأصل" style="display: none; margin-top: 5px;">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tradeType">نوع الصفقة</label>
+                                    <select id="tradeType" required>
+                                        <option value="شراء">شراء</option>
+                                        <option value="بيع">بيع</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="session">جلسة التداول</label>
+                                    <select id="session" required>
+                                        <option value="آسيا">جلسة آسيا</option>
+                                        <option value="لندن">جلسة لندن</option>
+                                        <option value="نيويورك">جلسة نيويورك</option>
+                                        <option value="أخرى">جلسة أخرى</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="amount">قيمة الصفقة ($)</label>
+                                    <input type="number" id="amount" placeholder="أدخل المبلغ بالدولار" min="0" step="0.01" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="result">نتيجة الصفقة</label>
+                                    <select id="result" required>
+                                        <option value="ربح">ربح</option>
+                                        <option value="خسارة">خسارة</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="profitLoss">قيمة الربح/الخسارة ($)</label>
+                                <input type="number" id="profitLoss" placeholder="أدخل قيمة الربح/الخسارة" step="0.01" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="tradeImage">صورة الصفقة (اختياري)</label>
+                                <div class="file-input-container">
+                                    <input type="file" id="tradeImage" accept="image/*" class="file-input">
+                                    <label for="tradeImage" class="file-input-label">
+                                        <i class="fas fa-upload"></i> اختر صورة
+                                    </label>
+                                </div>
+                                <div class="image-preview" id="imagePreview" style="display: none;">
+                                    <img id="previewImage" src="#" alt="معاينة الصورة">
+                                    <button type="button" id="removeImageBtn" class="delete-btn"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="notes">ملاحظات حول الصفقة</label>
+                                <textarea id="notes" placeholder="أضف ملاحظاتك حول الصفقة، استراتيجية الدخول والخروج، الدروس المستفادة..." rows="3"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="submit-btn"><i class="fas fa-save"></i> إضافة الصفقة</button>
+                        </form>
+                    </section>
+                    
+                    <section class="stats-section">
+                        <h2><i class="fas fa-chart-line"></i> إحصائيات التداول</h2>
+                        <div class="capital-stats">
+                            <div class="capital-card">
+                                <div class="capital-label">رأس المال الحالي</div>
+                                <div class="capital-value" id="currentCapital">$0</div>
+                            </div>
+                            <div class="capital-card">
+                                <div class="capital-label">إجمالي الأرباح/الخسائر</div>
+                                <div class="capital-value" id="totalPnL">$0</div>
+                            </div>
+                            <div class="capital-card">
+                                <div class="capital-label">نسبة العائد</div>
+                                <div class="capital-value" id="returnPercentage">0%</div>
+                            </div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
+                                <div class="stat-label">إجمالي الصفقات</div>
+                                <div class="stat-value" id="totalTrades">0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                                <div class="stat-label">الصفقات الرابحة</div>
+                                <div class="stat-value positive" id="winningTrades">0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                                <div class="stat-label">الصفقات الخاسرة</div>
+                                <div class="stat-value negative" id="losingTrades">0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                                <div class="stat-label">نسبة النجاح</div>
+                                <div class="stat-value" id="successRate">0%</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+                                <div class="stat-label">متوسط الربح</div>
+                                <div class="stat-value" id="averageProfit">$0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
+                                <div class="stat-label">متوسط الخسارة</div>
+                                <div class="stat-value" id="averageLoss">$0</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                                <div class="stat-label">أفضل جلسة</div>
+                                <div class="stat-value" id="bestSession">-</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-coins"></i></div>
+                                <div class="stat-label">أفضل أصل</div>
+                                <div class="stat-value" id="bestAsset">-</div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="strategy-tab">
+                <section class="strategy-section">
+                    <h2><i class="fas fa-chess-knight"></i> استراتيجية التداول الخاصة بي</h2>
+                    <div class="strategy-intro">
+                        <p>هنا يمكنك كتابة وتطوير استراتيجية التداول الخاصة بك. استخدم هذه المساحة لتحديد قواعد الدخول والخروج، إدارة المخاطر، والأهداف.</p>
+                    </div>
+                    
+                    <div class="strategy-form">
+                        <div class="form-group">
+                            <label for="strategyTitle">عنوان الاستراتيجية</label>
+                            <input type="text" id="strategyTitle" placeholder="أدخل عنواناً لاستراتيجيتك">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tradingStyle">نمط التداول</label>
+                            <select id="tradingStyle">
+                                <option value="">اختر نمط التداول</option>
+                                <option value="scalping">سكالبينج (Scalping)</option>
+                                <option value="day">تداول يومي (Day Trading)</option>
+                                <option value="swing">تداول أرجوحي (Swing Trading)</option>
+                                <option value="position">تداول مراكز (Position Trading)</option>
+                                <option value="investing">استثمار طويل الأجل</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="timeframe">الإطار الزمني المفضل</label>
+                            <select id="timeframe">
+                                <option value="">اختر الإطار الزمني</option>
+                                <option value="1m">1 دقيقة</option>
+                                <option value="5m">5 دقائق</option>
+                                <option value="15m">15 دقيقة</option>
+                                <option value="1h">1 ساعة</option>
+                                <option value="4h">4 ساعات</option>
+                                <option value="1d">يومي</option>
+                                <option value="1w">أسبوعي</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="riskPerTrade">نسبة المخاطرة لكل صفقة (%)</label>
+                            <input type="number" id="riskPerTrade" min="0" max="100" step="0.1" placeholder="مثال: 2">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rewardRatio">نسبة العائد للمخاطرة</label>
+                            <input type="number" id="rewardRatio" min="0" step="0.1" placeholder="مثال: 2 (يعني 2:1)">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="entryRules">قواعد الدخول</label>
+                            <textarea id="entryRules" placeholder="صف شروط الدخول إلى الصفقات..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="exitRules">قواعد الخروج</label>
+                            <textarea id="exitRules" placeholder="صف شروط الخروج من الصفقات..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="riskManagement">إدارة المخاطر</label>
+                            <textarea id="riskManagement" placeholder="صف استراتيجية إدارة المخاطر..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="psychologyNotes">ملاحظات نفسية</label>
+                            <textarea id="psychologyNotes" placeholder="اكتب ملاحظات حول الجانب النفسي في التداول..." rows="4"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="strategyNotes">ملاحظات إضافية</label>
+                            <textarea id="strategyNotes" placeholder="أي ملاحظات إضافية حول الاستراتيجية..." rows="4"></textarea>
+                        </div>
+                        
+                        <button id="saveStrategyBtn" class="submit-btn"><i class="fas fa-save"></i> حفظ الاستراتيجية</button>
+                    </div>
+                    
+                    <div class="strategy-preview" id="strategyPreview">
+                        <h3><i class="fas fa-eye"></i> معاينة الاستراتيجية</h3>
+                        <div class="preview-content" id="previewContent">
+                            <p class="no-preview">لم يتم حفظ استراتيجية بعد. املأ النموذج أعلاه واحفظ استراتيجيتك.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="tab-content" id="leaderboard-tab">
+                <section class="leaderboard-section">
+                    <h2><i class="fas fa-trophy"></i> لوحة المتصدرين</h2>
+                    <div class="leaderboard-intro">
+                        <p>تصنيف المتداولين بناءً على أدائهم. يمكنك مقارنة أدائك مع الآخرين وتحفيز نفسك للتحسين.</p>
+                    </div>
+                    
+                    <div class="leaderboard-filters">
+                        <div class="filter-group">
+                            <label for="leaderboardType">نوع التصنيف:</label>
+                            <select id="leaderboardType">
+                                <option value="winRate">أعلى نسبة فوز</option>
+                                <option value="totalProfit">أعلى إجمالي أرباح</option>
+                                <option value="roi">أعلى عائد على الاستثمار</option>
+                                <option value="consistency">أعلى معدل اتساق</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="timePeriod">الفترة الزمنية:</label>
+                            <select id="timePeriod">
+                                <option value="all">جميع الفترات</option>
+                                <option value="month">آخر شهر</option>
+                                <option value="week">آخر أسبوع</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="leaderboard-stats">
+                        <div class="user-rank-card">
+                            <div class="rank-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="rank-info">
+                                <h3>تصنيفك الحالي</h3>
+                                <div class="rank-value" id="userRank">-</div>
+                                <div class="rank-details" id="userRankDetails">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="leaderboard-container">
+                        <div class="leaderboard-header">
+                            <div class="rank-col">المركز</div>
+                            <div class="name-col">المتداول</div>
+                            <div class="stats-col">نسبة الفوز</div>
+                            <div class="stats-col">إجمالي الأرباح</div>
+                            <div class="stats-col">العائد</div>
+                        </div>
+                        <div class="leaderboard-list" id="leaderboardList">
+                            <div class="no-data">جاري تحميل البيانات...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="achievements-section">
+                        <h3><i class="fas fa-award"></i> الإنجازات</h3>
+                        <div class="achievements-grid" id="achievementsGrid">
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-rocket"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>المتداول المبتدئ</h4>
+                                    <p>إكمال 10 صفقات</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 30%"></div>
+                                    </div>
+                                    <span class="progress-text">3/10</span>
+                                </div>
+                            </div>
+                            
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>محترف الربح</h4>
+                                    <p>تحقيق $1000 ربح</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 15%"></div>
+                                    </div>
+                                    <span class="progress-text">$150/$1000</span>
+                                </div>
+                            </div>
+                            
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>مدير المخاطر</h4>
+                                    <p>نسبة فوز 70% أو أكثر</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 45%"></div>
+                                    </div>
+                                    <span class="progress-text">45%/70%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="tab-content" id="charts-tab">
+                <section class="charts-section">
+                    <h2><i class="fas fa-chart-bar"></i> الرسوم البيانية والإحصائيات</h2>
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h3>توزيع الصفقات (ربح/خسارة)</h3>
+                            <canvas id="winLossChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <h3>الأداء حسب جلسات التداول</h3>
+                            <canvas id="sessionChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <h3>الأداء حسب الأصول</h3>
+                            <canvas id="assetChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <h3>تطور الأرباح عبر الزمن</h3>
+                            <canvas id="profitChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="tab-content" id="calendar-tab">
+                <section class="calendar-section">
+                    <h2><i class="fas fa-calendar-alt"></i> تقويم الصفقات</h2>
+                    <div class="calendar-controls">
+                        <div class="calendar-header">
+                            <h3 id="calendar-month-year">شهر سنة</h3>
+                            <div class="calendar-nav">
+                                <button id="prev-month"><i class="fas fa-chevron-right"></i> الشهر السابق</button>
+                                <button id="current-month">الشهر الحالي</button>
+                                <button id="next-month">الشهر التالي <i class="fas fa-chevron-left"></i></button>
+                            </div>
+                        </div>
+                        <div class="calendar-view-toggle">
+                            <button class="view-btn active" data-view="month">عرض شهري</button>
+                            <button class="view-btn" data-view="week">عرض أسبوعي</button>
+                        </div>
+                    </div>
+                    <div class="calendar-view">
+                        <div class="calendar-grid" id="calendar-days">
+                            <!-- سيتم ملء التقويم بالجافاسكريبت -->
+                        </div>
+                        <div class="week-view" id="week-view" style="display: none;">
+                            <!-- سيتم ملء العرض الأسبوعي بالجافاسكريبت -->
+                        </div>
+                    </div>
+                    <div class="day-details" id="day-details">
+                        <h3 id="selected-day">تفاصيل الصفقات ليوم</h3>
+                        <div class="day-trades" id="day-trades-list">
+                            <!-- سيتم ملء تفاصيل الصفقات بالجافاسكريبت -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="tab-content" id="list-tab">
+                <section class="transactions-section">
+                    <h2><i class="fas fa-list"></i> سجل الصفقات</h2>
+                    <div class="filters">
+                        <select id="filterAsset">
+                            <option value="">جميع الأصول</option>
+                        </select>
+                        <select id="filterSession">
+                            <option value="">جميع الجلسات</option>
+                            <option value="آسيا">جلسة آسيا</option>
+                            <option value="لندن">جلسة لندن</option>
+                            <option value="نيويورك">جلسة نيويورك</option>
+                            <option value="أخرى">جلسة أخرى</option>
+                        </select>
+                        <select id="filterResult">
+                            <option value="">جميع النتائج</option>
+                            <option value="ربح">الصفقات الرابحة</option>
+                            <option value="خسارة">الصفقات الخاسرة</option>
+                        </select>
+                    </div>
+                    <div id="transactionsList">
+                        <p class="no-transactions">لا توجد صفقات مسجلة بعد. ابدأ بإضافة أول صفقة.</p>
+                    </div>
+                </section>
+            </div>
+
+            <div class="tab-content" id="performance-tab">
+                <section class="performance-section">
+                    <h2><i class="fas fa-tachometer-alt"></i> أداء رأس المال</h2>
+                    <div class="performance-stats">
+                        <div class="performance-card">
+                            <div class="performance-icon"><i class="fas fa-wallet"></i></div>
+                            <h3>رأس المال الابتدائي</h3>
+                            <div class="performance-value" id="initialCapitalDisplay">$0</div>
+                        </div>
+                        <div class="performance-card">
+                            <div class="performance-icon"><i class="fas fa-chart-line"></i></div>
+                            <h3>رأس المال الحالي</h3>
+                            <div class="performance-value" id="currentCapitalDisplay">$0</div>
+                        </div>
+                        <div class="performance-card">
+                            <div class="performance-icon"><i class="fas fa-money-bill-wave"></i></div>
+                            <h3>صافي الربح/الخسارة</h3>
+                            <div class="performance-value" id="netPnLDisplay">$0</div>
+                        </div>
+                        <div class="performance-card">
+                            <div class="performance-icon"><i class="fas fa-percentage"></i></div>
+                            <h3>نسبة العودة</h3>
+                            <div class="performance-value" id="roiDisplay">0%</div>
+                        </div>
+                    </div>
+                    <div class="chart-container full-width">
+                        <h3>تطور رأس المال مع الزمن</h3>
+                        <canvas id="capitalChart"></canvas>
+                    </div>
+                    <div class="performance-grid">
+                        <div class="chart-container">
+                            <h3>توزيع الصفقات الشهري</h3>
+                            <canvas id="monthlyTradesChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>معدل النجاح الشهري</h3>
+                            <canvas id="monthlySuccessChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal عرض الصورة -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content image-modal">
+            <span class="close">&times;</span>
+            <img id="modalImage" src="" alt="صورة الصفقة">
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
