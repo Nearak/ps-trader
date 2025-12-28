@@ -11,7 +11,7 @@
 <body>
     <div class="container">
         <header>
-            <div class="user-info" id="userInfo">
+            <div class="user-info" id="userInfo" style="display: none;">
                 <div class="user-details">
                     <span id="userGreeting">مرحباً، </span>
                     <div class="capital-info">
@@ -22,8 +22,8 @@
                 <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
             </div>
             <div class="header-content">
-                <h1><i class="fas fa-chart-line"></i> دفتر صفقات المتداول</h1>
-                <p>DEV BY : MOHAMMEDAK</p>
+                <h1><i class="fas fa-chart-line"></i> سجل صفقات التداول المتكامل</h1>
+                <p>أداة متكاملة لتسجيل وتحليل أداء صفقاتك في التداول</p>
             </div>
         </header>
         
@@ -410,7 +410,6 @@
                                 <option value="totalProfit">أعلى إجمالي أرباح</option>
                                 <option value="roi">أعلى عائد على الاستثمار</option>
                                 <option value="consistency">أعلى معدل اتساق</option>
-                                <option value="totalTrades">أعلى عدد صفقات</option>
                             </select>
                         </div>
                         
@@ -420,18 +419,6 @@
                                 <option value="all">جميع الفترات</option>
                                 <option value="month">آخر شهر</option>
                                 <option value="week">آخر أسبوع</option>
-                                <option value="today">اليوم</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-group">
-                            <label for="minTrades">أقل عدد صفقات:</label>
-                            <select id="minTrades">
-                                <option value="0">جميع المتداولين</option>
-                                <option value="5">5 صفقات فأكثر</option>
-                                <option value="10">10 صفقات فأكثر</option>
-                                <option value="20">20 صفقة فأكثر</option>
-                                <option value="50">50 صفقة فأكثر</option>
                             </select>
                         </div>
                     </div>
@@ -453,59 +440,59 @@
                         <div class="leaderboard-header">
                             <div class="rank-col">المركز</div>
                             <div class="name-col">المتداول</div>
-                            <div class="stats-col">عدد الصفقات</div>
                             <div class="stats-col">نسبة الفوز</div>
                             <div class="stats-col">إجمالي الأرباح</div>
                             <div class="stats-col">العائد</div>
                         </div>
                         <div class="leaderboard-list" id="leaderboardList">
-                            <div class="loading-spinner"></div>
-                        </div>
-                    </div>
-
-                    <div class="leaderboard-summary">
-                        <div class="summary-card">
-                            <div class="summary-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="summary-info">
-                                <h4>إجمالي المتداولين</h4>
-                                <div class="summary-value" id="totalTraders">0</div>
-                            </div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-icon">
-                                <i class="fas fa-exchange-alt"></i>
-                            </div>
-                            <div class="summary-info">
-                                <h4>إجمالي الصفقات</h4>
-                                <div class="summary-value" id="totalAllTrades">0</div>
-                            </div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-icon">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                            <div class="summary-info">
-                                <h4>متوسط نسبة الفوز</h4>
-                                <div class="summary-value" id="avgWinRate">0%</div>
-                            </div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-icon">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </div>
-                            <div class="summary-info">
-                                <h4>أعلى ربح</h4>
-                                <div class="summary-value" id="highestProfit">$0</div>
-                            </div>
+                            <div class="no-data">جاري تحميل البيانات...</div>
                         </div>
                     </div>
                     
                     <div class="achievements-section">
                         <h3><i class="fas fa-award"></i> الإنجازات</h3>
                         <div class="achievements-grid" id="achievementsGrid">
-                            <!-- سيتم ملء الإنجازات ديناميكياً -->
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-rocket"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>المتداول المبتدئ</h4>
+                                    <p>إكمال 10 صفقات</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 30%"></div>
+                                    </div>
+                                    <span class="progress-text">3/10</span>
+                                </div>
+                            </div>
+                            
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>محترف الربح</h4>
+                                    <p>تحقيق $1000 ربح</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 15%"></div>
+                                    </div>
+                                    <span class="progress-text">$150/$1000</span>
+                                </div>
+                            </div>
+                            
+                            <div class="achievement-card locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div class="achievement-info">
+                                    <h4>مدير المخاطر</h4>
+                                    <p>نسبة فوز 70% أو أكثر</p>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: 45%"></div>
+                                    </div>
+                                    <span class="progress-text">45%/70%</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -662,13 +649,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-    
-    <!-- التطبيق الرئيسي -->
     <script src="app.js"></script>
 </body>
 </html>
