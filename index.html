@@ -6,7 +6,9 @@
     <title>سجل صفقات التداول - النظام المتكامل</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+       <link rel="stylesheet" href="style.css">
+    </style>
 </head>
 <body>
     <div class="container">
@@ -22,7 +24,7 @@
                 <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
             </div>
             <div class="header-content">
-                <h1><i class="fas fa-chart-line"></i>دفتر صفقات المتداول</h1>
+                <h1><i class="fas fa-chart-line"></i> دفتر صفقات المتداول</h1>
                 <p>DEV BY : MOHAMMEDAK</p>
             </div>
         </header>
@@ -35,7 +37,7 @@
             
             <div class="auth-form active" id="loginForm">
                 <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
-                <div class="alert" id="loginAlert"></div>
+                <div class="alert" id="loginAlert" style="display: none;"></div>
                 <form id="loginUserForm">
                     <div class="form-group">
                         <label for="loginEmail">البريد الإلكتروني</label>
@@ -53,7 +55,7 @@
             
             <div class="auth-form" id="registerForm">
                 <h2><i class="fas fa-user-plus"></i> إنشاء حساب جديد</h2>
-                <div class="alert" id="registerAlert"></div>
+                <div class="alert" id="registerAlert" style="display: none;"></div>
                 <form id="registerUserForm">
                     <div class="form-group">
                         <label for="registerName">الاسم الكامل</label>
@@ -85,7 +87,7 @@
             </div>
         </section>
         
-        <div class="app-content" id="appContent">
+        <div class="app-content" id="appContent" style="display: none;">
             <!-- Modal تعديل رأس المال -->
             <div id="capitalModal" class="modal">
                 <div class="modal-content">
@@ -648,12 +650,14 @@
             </button>
         </div>
     </div>
-<!-- أضف هذا قبل <script src="app.js"></script> -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    
+    <!-- التطبيق الرئيسي -->
 <script src="app.js"></script>
-    <script src="app.js"></script>
 </body>
 </html>
