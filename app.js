@@ -1351,10 +1351,11 @@ window.showDayTrades = function(dateStr) {
     }
     
     // إظهار قسم التفاصيل
-    document.getElementById('day-details').style.display = 'block';
+    const dayDetails = document.getElementById('day-details');
+    if (dayDetails) {
+        dayDetails.style.display = 'block';
+    }
 };
-
-console.log("🎯 Application initialized successfully!");
 
 // ========== دوال إضافية تحتاجها ==========
 function calculateStats(trades) {
@@ -1391,63 +1392,1045 @@ function calculateStats(trades) {
     return stats;
 }
 
-// ========== دوال placeholder للوظائف المفقودة ==========
+// ========== إضافة صفقة جديدة ==========
+async function addTrade() {
+    if (!currentUser || !userData) {
+        showError('يجب تسجيل الدخول أولاً');
+        return;
+    }
+    
+    const asset = document.getElementById('asset').value;
+    const otherAsset = document.getElementById('otherAsset').value;
+    const selectedAsset = asset === 'other' ? otherAsset : asset;
+    
+    const tradeType = document.getElementById('tradeType').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const result = document.getElementById('result').value;
+    const profitLoss = parseFloat(document.getElementById('profitLoss').value);
+    const session = document.getElementById('session').value;
+    const notes = document.getElementById('notes').value;
+    const tradeDate = document.getElementById('tradeDate').value;
+    const imageFile = document.getElementById('tradeImage').files[0];
+    
+    // التحقق من الحقول المطلوبة
+    if (!selectedAsset || !tradeType || !amount || !result || isNaN(profitLoss) || !session || !tradeDate) {
+        showError('يرجى ملء جميع الحقول المطلوبة');
+        return;
+    }
+    
+    if (amount <= 0) {
+        showError('المبلغ يجب أن يكون أكبر من الصفر');
+        return;
+    }
+    
+    if (asset === 'other' && !otherAsset) {
+        showError('يرجى إدخال اسم الأصل');
+        return;
+    }
+    
+    try {
+        console.log("➕ Adding new trade...");
+        
+        // رفع الصورة إذا كانت موجودة
+        let imageUrl = '';
+        if (imageFile) {
+            const storageRef = storage.ref(`trades/${currentUser.uid}/${Date.now()}_${imageFile.name}`);
+            const snapshot = await storageRef.put(imageFile);
+            imageUrl = await snapshot.ref.getDownloadURL();
+            console.log("✅ Image uploaded:", imageUrl);
+        }
+        
+        // إنشاء كائن الصفقة
+        const tradeData = {
+            userId: currentUser.uid,
+            userName: userData.name,
+            asset: selectedAsset,
+            tradeType: tradeType,
+            amount: amount,
+            result: result,
+            profitLoss: profitLoss,
+            session: session,
+            notes: notes,
+            imageUrl: imageUrl,
+            date: firebase.firestore.Timestamp.fromDate(new Date(tradeDate)),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // إضافة الصفقة إلى Firestore
+        const docRef = await db.collection('trades').add(tradeData);
+        console.log("✅ Trade added with ID:", docRef.id);
+        
+        // تحديث رأس المال بناءً على نتيجة الصفقة
+        const newCapital = userData.currentCapital + profitLoss;
+        
+        // تحديث إحصائيات المستخدم
+        const updateData = {
+            currentCapital: newCapital,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        if (result === 'ربح') {
+            updateData.totalProfit = (userData.totalProfit || 0) + profitLoss;
+        } else if (result === 'خسارة') {
+            updateData.totalLoss = (userData.totalLoss || 0) + Math.abs(profitLoss);
+        }
+        
+        updateData.totalTrades = (userData.totalTrades || 0) + 1;
+        
+        await db.collection('users').doc(currentUser.uid).update(updateData);
+        console.log("✅ User data updated");
+        
+        // إعادة تعيين النموذج
+        document.getElementById('tradeForm').reset();
+        removeImagePreview();
+        
+        // إظهار رسالة النجاح
+        showSuccess('تم إضافة الصفقة بنجاح!');
+        
+        // إعادة تحميل البيانات
+        await loadUserData();
+        
+    } catch (error) {
+        console.error("❌ Error adding trade:", error);
+        showError('حدث خطأ أثناء إضافة الصفقة: ' + error.message);
+    }
+}
+
+// ========== تحديث قائمة الصفقات ==========
+function updateTradesList() {
+    const tradesList = document.getElementById('tradesList');
+    if (!tradesList) return;
+    
+    // تطبيق الفلاتر
+    let filteredTrades = [...userTrades];
+    
+    const filterAsset = document.getElementById('filterAsset').value;
+    const filterSession = document.getElementById('filterSession').value;
+    const filterResult = document.getElementById('filterResult').value;
+    
+    if (filterAsset && filterAsset !== 'all') {
+        filteredTrades = filteredTrades.filter(trade => trade.asset === filterAsset);
+    }
+    
+    if (filterSession && filterSession !== 'all') {
+        filteredTrades = filteredTrades.filter(trade => trade.session === filterSession);
+    }
+    
+    if (filterResult && filterResult !== 'all') {
+        filteredTrades = filteredTrades.filter(trade => trade.result === filterResult);
+    }
+    
+    // تحديث العداد
+    document.getElementById('tradesCount').textContent = filteredTrades.length;
+    
+    if (filteredTrades.length === 0) {
+        tradesList.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-chart-bar"></i>
+                <p>لا توجد صفقات لعرضها</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    filteredTrades.forEach(trade => {
+        const profitClass = trade.result === 'ربح' ? 'positive' : 'negative';
+        const profitSign = trade.result === 'ربح' ? '+' : '-';
+        const amount = parseFloat(trade.amount) || 0;
+        const profitLoss = parseFloat(trade.profitLoss) || 0;
+        
+        // تنسيق التاريخ
+        let dateStr = '';
+        if (trade.date) {
+            let tradeDate;
+            if (trade.date.toDate) {
+                tradeDate = trade.date.toDate();
+            } else {
+                tradeDate = new Date(trade.date);
+            }
+            dateStr = tradeDate.toLocaleDateString('ar-SA', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        
+        html += `
+            <div class="transaction-item">
+                <div class="transaction-header">
+                    <div class="transaction-type ${trade.tradeType === 'شراء' ? 'buy' : 'sell'}">
+                        ${trade.tradeType === 'شراء' ? 'شراء' : 'بيع'} ${trade.asset}
+                        <span style="font-size: 0.8em; color: #666; margin-right: 10px;">${dateStr}</span>
+                    </div>
+                    <div class="transaction-actions">
+                        ${trade.imageUrl ? 
+                            `<button class="btn-icon" onclick="showImageModal('${trade.imageUrl}')">
+                                <i class="fas fa-image"></i>
+                            </button>` : ''
+                        }
+                        ${trade.notes ? 
+                            `<button class="btn-icon" onclick="showFullNotes('${trade.notes}')">
+                                <i class="fas fa-sticky-note"></i>
+                            </button>` : ''
+                        }
+                        <button class="btn-icon btn-danger" onclick="deleteTrade('${trade.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="transaction-details">
+                    <div class="detail">
+                        <span class="label">الجلسة:</span>
+                        <span class="value">${trade.session}</span>
+                    </div>
+                    <div class="detail">
+                        <span class="label">المبلغ:</span>
+                        <span class="value">$${amount.toFixed(2)}</span>
+                    </div>
+                    <div class="detail">
+                        <span class="label">النتيجة:</span>
+                        <span class="value ${profitClass}">
+                            ${trade.result} (${profitSign}$${Math.abs(profitLoss).toFixed(2)})
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    tradesList.innerHTML = html;
+}
+
+// ========== تقويم الصفقات ==========
+function updateCalendar() {
+    const calendarGrid = document.getElementById('calendarGrid');
+    if (!calendarGrid) return;
+    
+    // حساب عدد الأيام في الشهر
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    
+    // تحويل اليوم إلى النظام العربي (الأحد = 0 في JavaScript)
+    const adjustedFirstDay = (firstDay + 6) % 7;
+    
+    let html = '';
+    
+    // إضافة أيام الأسبوع
+    const weekdays = ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
+    weekdays.forEach(day => {
+        html += `<div class="calendar-weekday">${day}</div>`;
+    });
+    
+    // إضافة خلايا فارغة قبل أول يوم من الشهر
+    for (let i = 0; i < adjustedFirstDay; i++) {
+        html += '<div class="calendar-day empty"></div>';
+    }
+    
+    // إضافة أيام الشهر
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        // البحث عن صفقات في هذا اليوم
+        const dayTrades = userTrades.filter(trade => {
+            if (!trade.date) return false;
+            let tradeDate;
+            if (trade.date.toDate) {
+                tradeDate = trade.date.toDate();
+            } else {
+                tradeDate = new Date(trade.date);
+            }
+            const tradeDateStr = tradeDate.toISOString().split('T')[0];
+            return tradeDateStr === dateStr;
+        });
+        
+        let dayClass = 'calendar-day';
+        let dayContent = `<div class="day-number">${day}</div>`;
+        
+        if (dayTrades.length > 0) {
+            dayClass += ' has-trades';
+            
+            // حساب إجمالي الربح/الخسارة لهذا اليوم
+            let dayProfit = 0;
+            dayTrades.forEach(trade => {
+                dayProfit += parseFloat(trade.profitLoss) || 0;
+            });
+            
+            const profitClass = dayProfit >= 0 ? 'positive' : 'negative';
+            const profitSign = dayProfit >= 0 ? '+' : '';
+            
+            dayContent += `
+                <div class="day-trades-count">${dayTrades.length} صفقة</div>
+                <div class="day-profit ${profitClass}">${profitSign}${dayProfit.toFixed(2)}$</div>
+            `;
+        }
+        
+        html += `<div class="${dayClass}" onclick="window.showDayTrades('${dateStr}')">${dayContent}</div>`;
+    }
+    
+    calendarGrid.innerHTML = html;
+    
+    // تحديث عنوان الشهر
+    const monthNames = [
+        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    
+    const calendarTitle = document.getElementById('calendarTitle');
+    if (calendarTitle) {
+        calendarTitle.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    }
+}
+
+// ========== تحديث الإحصائيات ==========
+function updateStats() {
+    if (!userTrades || userTrades.length === 0) {
+        // تعيين قيم افتراضية إذا لم توجد صفقات
+        document.getElementById('totalTrades').textContent = '0';
+        document.getElementById('winRate').textContent = '0%';
+        document.getElementById('totalProfit').textContent = '$0.00';
+        document.getElementById('totalLoss').textContent = '$0.00';
+        document.getElementById('netProfit').textContent = '$0.00';
+        return;
+    }
+    
+    const stats = calculateStats(userTrades);
+    
+    document.getElementById('totalTrades').textContent = stats.totalTrades;
+    document.getElementById('winRate').textContent = `${stats.successRate.toFixed(1)}%`;
+    document.getElementById('totalProfit').textContent = `$${stats.totalProfit.toFixed(2)}`;
+    document.getElementById('totalLoss').textContent = `$${stats.totalLoss.toFixed(2)}`;
+    
+    const netProfit = stats.totalProfit - stats.totalLoss;
+    document.getElementById('netProfit').textContent = `$${netProfit.toFixed(2)}`;
+    
+    // تحديث رأس المال الحالي في واجهة المستخدم
+    if (userData && document.getElementById('userCapital')) {
+        document.getElementById('userCapital').textContent = `$${userData.currentCapital.toFixed(2)}`;
+    }
+}
+
+// ========== عرض وتحديث رأس المال ==========
+function showCapitalModal() {
+    if (!currentUser || !userData) {
+        showError('يجب تسجيل الدخول أولاً');
+        return;
+    }
+    
+    const modal = document.getElementById('capitalModal');
+    const currentCapitalInput = document.getElementById('currentCapital');
+    
+    if (modal && currentCapitalInput) {
+        currentCapitalInput.value = userData.currentCapital;
+        modal.style.display = 'block';
+    }
+}
+
+async function updateCapital() {
+    if (!currentUser || !userData) {
+        showError('يجب تسجيل الدخول أولاً');
+        return;
+    }
+    
+    const newCapital = parseFloat(document.getElementById('currentCapital').value);
+    
+    if (isNaN(newCapital) || newCapital < 0) {
+        showError('رأس المال يجب أن يكون قيمة عددية موجبة');
+        return;
+    }
+    
+    try {
+        await db.collection('users').doc(currentUser.uid).update({
+            currentCapital: newCapital,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        userData.currentCapital = newCapital;
+        
+        // إغلاق المودال
+        document.getElementById('capitalModal').style.display = 'none';
+        
+        // تحديث الواجهة
+        updateUIAfterLogin();
+        
+        showSuccess('تم تحديث رأس المال بنجاح!');
+        
+    } catch (error) {
+        console.error("❌ Error updating capital:", error);
+        showError('حدث خطأ أثناء تحديث رأس المال');
+    }
+}
+
+// ========== دوال الصور ==========
 function previewImage() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Image preview function");
+    const imageFile = document.getElementById('tradeImage').files[0];
+    const preview = document.getElementById('imagePreview');
+    const removeBtn = document.getElementById('removeImageBtn');
+    
+    if (imageFile && preview) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            
+            if (removeBtn) {
+                removeBtn.style.display = 'inline-block';
+            }
+        }
+        
+        reader.readAsDataURL(imageFile);
+    }
 }
 
 function removeImagePreview() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Remove image preview function");
+    const preview = document.getElementById('imagePreview');
+    const removeBtn = document.getElementById('removeImageBtn');
+    const imageInput = document.getElementById('tradeImage');
+    
+    if (preview) {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+    
+    if (removeBtn) {
+        removeBtn.style.display = 'none';
+    }
+    
+    if (imageInput) {
+        imageInput.value = '';
+    }
 }
 
-function addTrade() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Add trade function");
-}
-
-function updateTradesList() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Update trades list function");
-}
-
-function updateCalendar() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Update calendar function");
-}
-
-function updateStats() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Update stats function");
-}
-
-function updateCharts() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Update charts function");
-}
-
-function showCapitalModal() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Show capital modal function");
-}
-
-function updateCapital() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Update capital function");
-}
-
-function saveStrategy() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Save strategy function");
+// ========== دوال الاستراتيجية ==========
+async function saveStrategy() {
+    if (!currentUser) {
+        showError('يجب تسجيل الدخول أولاً');
+        return;
+    }
+    
+    const strategyText = document.getElementById('strategyText').value;
+    
+    if (!strategyText.trim()) {
+        showError('يرجى كتابة الاستراتيجية');
+        return;
+    }
+    
+    try {
+        await db.collection('strategies').doc(currentUser.uid).set({
+            text: strategyText,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        userStrategy = { text: strategyText };
+        displayStrategyPreview();
+        
+        showSuccess('تم حفظ الاستراتيجية بنجاح!');
+        
+    } catch (error) {
+        console.error("❌ Error saving strategy:", error);
+        showError('حدث خطأ أثناء حفظ الاستراتيجية');
+    }
 }
 
 function displayStrategyPreview() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Display strategy preview function");
+    const strategyPreview = document.getElementById('strategyPreview');
+    const strategyTextInput = document.getElementById('strategyText');
+    
+    if (!userStrategy || !strategyPreview) return;
+    
+    strategyPreview.textContent = userStrategy.text;
+    
+    if (strategyTextInput) {
+        strategyTextInput.value = userStrategy.text;
+    }
 }
 
-function updatePerformanceCharts() {
-    // سيتم تنفيذها لاحقاً
-    console.log("Update performance charts function");
+// ========== دوال الرسوم البيانية ==========
+function updateCharts() {
+    if (!userTrades || userTrades.length === 0) {
+        // إخفاء الرسوم البيانية إذا لم توجد صفقات
+        const chartContainers = document.querySelectorAll('.chart-container');
+        chartContainers.forEach(container => {
+            container.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+        });
+        return;
+    }
+    
+    updateWinLossChart();
+    updateSessionChart();
+    updateAssetChart();
+    updateProfitChart();
+    updateCapitalChart();
 }
+
+function updateWinLossChart() {
+    const canvas = document.getElementById('winLossChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    
+    const stats = calculateStats(userTrades);
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['صفقات رابحة', 'صفقات خاسرة'],
+            datasets: [{
+                data: [stats.winningTrades, stats.losingTrades],
+                backgroundColor: ['#4CAF50', '#F44336'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'نسبة الربح والخسارة',
+                    font: {
+                        family: 'Cairo, sans-serif',
+                        size: 14
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateSessionChart() {
+    const canvas = document.getElementById('sessionChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    
+    // تجميع الصفقات حسب الجلسة
+    const sessionData = {};
+    userTrades.forEach(trade => {
+        if (trade.session) {
+            sessionData[trade.session] = (sessionData[trade.session] || 0) + 1;
+        }
+    });
+    
+    const sessions = Object.keys(sessionData);
+    const counts = Object.values(sessionData);
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sessions,
+            datasets: [{
+                label: 'عدد الصفقات',
+                data: counts,
+                backgroundColor: '#667eea',
+                borderColor: '#667eea',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'الصفقات حسب الجلسة',
+                    font: {
+                        family: 'Cairo, sans-serif',
+                        size: 14
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateAssetChart() {
+    const canvas = document.getElementById('assetChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    
+    // تجميع الصفقات حسب الأصل
+    const assetData = {};
+    userTrades.forEach(trade => {
+        if (trade.asset) {
+            assetData[trade.asset] = (assetData[trade.asset] || 0) + 1;
+        }
+    });
+    
+    const assets = Object.keys(assetData);
+    const counts = Object.values(assetData);
+    
+    // توليد ألوان متعددة
+    const backgroundColors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+    ];
+    
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: assets,
+            datasets: [{
+                data: counts,
+                backgroundColor: backgroundColors.slice(0, assets.length),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'توزيع الصفقات حسب الأصل',
+                    font: {
+                        family: 'Cairo, sans-serif',
+                        size: 14
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateProfitChart() {
+    const canvas = document.getElementById('profitChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    
+    // تجميع الأرباح حسب التاريخ (آخر 7 أيام)
+    const last7Days = [];
+    const profitData = [];
+    
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        let dayProfit = 0;
+        userTrades.forEach(trade => {
+            if (!trade.date) return;
+            
+            let tradeDate;
+            if (trade.date.toDate) {
+                tradeDate = trade.date.toDate();
+            } else {
+                tradeDate = new Date(trade.date);
+            }
+            
+            const tradeDateStr = tradeDate.toISOString().split('T')[0];
+            if (tradeDateStr === dateStr) {
+                dayProfit += parseFloat(trade.profitLoss) || 0;
+            }
+        });
+        
+        last7Days.push(dateStr);
+        profitData.push(dayProfit);
+    }
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: last7Days,
+            datasets: [{
+                label: 'صافي الربح اليومي',
+                data: profitData,
+                borderColor: '#4CAF50',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'تطور الأرباح خلال الأسبوع',
+                    font: {
+                        family: 'Cairo, sans-serif',
+                        size: 14
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateCapitalChart() {
+    const canvas = document.getElementById('capitalChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    
+    // محاكاة نمو رأس المال بناءً على الصفقات
+    let capital = userData.initialCapital;
+    const capitalData = [capital];
+    const capitalDates = ['البداية'];
+    
+    // ترتيب الصفقات من الأقدم إلى الأحدث
+    const sortedTrades = [...userTrades].sort((a, b) => {
+        const dateA = a.date ? (a.date.toDate ? a.date.toDate() : new Date(a.date)) : new Date(0);
+        const dateB = b.date ? (b.date.toDate ? b.date.toDate() : new Date(b.date)) : new Date(0);
+        return dateA - dateB;
+    });
+    
+    sortedTrades.forEach((trade, index) => {
+        capital += parseFloat(trade.profitLoss) || 0;
+        capitalData.push(capital);
+        capitalDates.push(`صفقة ${index + 1}`);
+    });
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: capitalDates,
+            datasets: [{
+                label: 'رأس المال',
+                data: capitalData,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'تطور رأس المال',
+                    font: {
+                        family: 'Cairo, sans-serif',
+                        size: 14
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ========== دوال الأداء ==========
+function updatePerformanceCharts() {
+    if (!userTrades || userTrades.length === 0) return;
+    
+    updateMonthlyTradesChart();
+    updateMonthlySuccessChart();
+}
+
+function updateMonthlyTradesChart() {
+    const canvas = document.getElementById('monthlyTradesChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    
+    // تجميع الصفقات حسب الشهر
+    const monthlyData = {};
+    const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                       'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    
+    userTrades.forEach(trade => {
+        if (!trade.date) return;
+        
+        let tradeDate;
+        if (trade.date.toDate) {
+            tradeDate = trade.date.toDate();
+        } else {
+            tradeDate = new Date(trade.date);
+        }
+        
+        const month = tradeDate.getMonth();
+        const year = tradeDate.getFullYear();
+        const key = `${year}-${month}`;
+        
+        monthlyData[key] = (monthlyData[key] || 0) + 1;
+    });
+    
+    const sortedKeys = Object.keys(monthlyData).sort();
+    const months = sortedKeys.map(key => {
+        const [year, month] = key.split('-');
+        return `${monthNames[parseInt(month)]} ${year}`;
+    });
+    const counts = sortedKeys.map(key => monthlyData[key]);
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'عدد الصفقات',
+                data: counts,
+                backgroundColor: '#36A2EB',
+                borderColor: '#36A2EB',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'الصفقات حسب الشهر',
+                    font: {
+                        family: 'Cairo, sans-serif',
+                        size: 14
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateMonthlySuccessChart() {
+    const canvas = document.getElementById('monthlySuccessChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    
+    // حساب نسبة النجاح حسب الشهر
+    const monthlySuccess = {};
+    const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                       'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    
+    userTrades.forEach(trade => {
+        if (!trade.date) return;
+        
+        let tradeDate;
+        if (trade.date.toDate) {
+            tradeDate = trade.date.toDate();
+        } else {
+            tradeDate = new Date(trade.date);
+        }
+        
+        const month = tradeDate.getMonth();
+        const year = tradeDate.getFullYear();
+        const key = `${year}-${month}`;
+        
+        if (!monthlySuccess[key]) {
+            monthlySuccess[key] = { total: 0, wins: 0 };
+        }
+        
+        monthlySuccess[key].total++;
+        if (trade.result === 'ربح') {
+            monthlySuccess[key].wins++;
+        }
+    });
+    
+    const sortedKeys = Object.keys(monthlySuccess).sort();
+    const months = sortedKeys.map(key => {
+        const [year, month] = key.split('-');
+        return `${monthNames[parseInt(month)]} ${year}`;
+    });
+    const successRates = sortedKeys.map(key => {
+        const data = monthlySuccess[key];
+        return data.total > 0 ? (data.wins / data.total) * 100 : 0;
+    });
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'نسبة النجاح %',
+                data: successRates,
+                borderColor: '#4CAF50',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'نسبة النجاح حسب الشهر',
+                    font: {
+                        family: 'Cairo, sans-serif',
+                        size: 14
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            family: 'Cairo, sans-serif'
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ========== دوال التحكم في التقويم ==========
+window.prevMonth = function() {
+    currentMonth--;
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    }
+    updateCalendar();
+};
+
+window.nextMonth = function() {
+    currentMonth++;
+    if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+    updateCalendar();
+};
+
+console.log("🎯 Application initialized successfully!");
