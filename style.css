@@ -240,6 +240,21 @@ body {
     border-bottom-color: #4c5fd7;
 }
 
+/* هذا هو التصحيح: يجب أن تكون tab-content مخفية إلا النشط */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 /* الكاردات والأقسام */
 .card {
     background: white;
@@ -700,6 +715,12 @@ body {
 .chart-container {
     position: relative;
     height: 300px;
+    width: 100%;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* المودالات */
@@ -864,6 +885,16 @@ body {
     .chart-card.large {
         grid-column: span 1;
     }
+    
+    .calendar-grid {
+        grid-template-columns: repeat(7, 1fr);
+        font-size: 12px;
+    }
+    
+    .calendar-day {
+        padding: 8px;
+        min-height: 70px;
+    }
 }
 
 /* تأثيرات التحميل */
@@ -905,4 +936,15 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #764ba2;
+}
+
+/* تحسينات للتبويبات */
+.tab-content-wrapper {
+    position: relative;
+}
+
+/* تحسينات للرسوم البيانية */
+canvas {
+    max-width: 100%;
+    height: auto;
 }
