@@ -1612,7 +1612,7 @@ function updateTradesList() {
                         <span class="value">${trade.session}</span>
                     </div>
                     <div class="detail">
-                        <span class="label">المبلغ:</span>
+                        <span class="label">لوت:</span>
                         <span class="value">$${amount.toFixed(2)}</span>
                     </div>
                     <div class="detail">
