@@ -11,8 +11,13 @@ const firebaseConfig = {
 
 // Initialize Firebase
 try {
-    firebase.initializeApp(firebaseConfig);
-    console.log("✅ Firebase initialized successfully");
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log("✅ Firebase initialized successfully");
+    } else {
+        firebase.app();
+        console.log("✅ Firebase already initialized");
+    }
 } catch (error) {
     console.error("❌ Firebase initialization error:", error);
     showError("خطأ في تهيئة Firebase. تأكد من اتصال الإنترنت.");
@@ -43,6 +48,9 @@ let allTradersData = [];
 // متغيرات التقويم
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
+
+// متغيرات الرسوم البيانية
+let chartInstances = {};
 
 // ========== تهيئة التطبيق عند تحميل الصفحة ==========
 document.addEventListener('DOMContentLoaded', function() {
@@ -296,11 +304,12 @@ function updateUIAfterLogin() {
         if (initialCapitalDisplay) initialCapitalDisplay.textContent = `$${userData.initialCapital.toFixed(2)}`;
     }
     
-    // إعادة رسم الرسوم البيانية
-    setTimeout(() => {
-        updateCharts();
-        updateStats();
-    }, 500);
+    // إعادة رسم الرسوم البيانية فقط إذا كانت البيانات متوفرة
+    if (userTrades && userTrades.length > 0) {
+        setTimeout(() => {
+            updateCharts();
+        }, 1000);
+    }
 }
 
 // ========== بدء تحديث الجلسة ==========
@@ -361,6 +370,8 @@ function cleanupCharts() {
             if (chart) {
                 chart.destroy();
             }
+            // تنظيف المتغير المحلي
+            chartInstances[chartId] = null;
         }
     });
 }
@@ -653,8 +664,10 @@ async function loadUserData() {
             // تحديث الإحصائيات
             updateStats();
             
-            // تحديث جميع الرسوم البيانية
-            updateCharts();
+            // تحديث الرسوم البيانية فقط إذا كان هناك بيانات
+            if (userTrades && userTrades.length > 0) {
+                updateCharts();
+            }
             
         } else {
             console.error("❌ User document not found in Firestore");
@@ -683,6 +696,10 @@ async function loadUserTrades() {
         snapshot.forEach(doc => {
             const trade = doc.data();
             trade.id = doc.id;
+            // تحويل التواريخ بشكل صحيح
+            if (trade.date && trade.date.toDate) {
+                trade.date = trade.date.toDate();
+            }
             userTrades.push(trade);
         });
         
@@ -717,6 +734,10 @@ async function loadTradesWithoutOrder() {
         snapshot.forEach(doc => {
             const trade = doc.data();
             trade.id = doc.id;
+            // تحويل التواريخ بشكل صحيح
+            if (trade.date && trade.date.toDate) {
+                trade.date = trade.date.toDate();
+            }
             userTrades.push(trade);
         });
         
@@ -1121,11 +1142,16 @@ function switchTab(tabId) {
         if (tabId === 'leaderboard') {
             loadLeaderboard();
         } else if (tabId === 'charts') {
-            updateCharts();
+            // تأخير تحديث الرسوم البيانية للتأكد من عرض العنصر
+            setTimeout(() => {
+                updateCharts();
+            }, 100);
         } else if (tabId === 'calendar') {
             updateCalendar();
         } else if (tabId === 'performance') {
-            updatePerformanceCharts();
+            setTimeout(() => {
+                updatePerformanceCharts();
+            }, 100);
         }
     }
 }
@@ -1849,27 +1875,38 @@ function displayStrategyPreview() {
 
 // ========== دوال الرسوم البيانية ==========
 function updateCharts() {
-    if (!userTrades || userTrades.length === 0) {
-        // إخفاء الرسوم البيانية إذا لم توجد صفقات
+    if (!userTrades || userTrades.length === 0 || !userData) {
+        console.log("📊 No data for charts");
+        // عرض رسالة "لا توجد بيانات" فقط في الحاويات الفارغة
         const chartContainers = document.querySelectorAll('.chart-container');
         chartContainers.forEach(container => {
-            container.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+            if (!container.querySelector('canvas')) {
+                container.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+            }
         });
         return;
     }
     
-    updateWinLossChart();
-    updateSessionChart();
-    updateAssetChart();
-    updateProfitChart();
-    updateCapitalChart();
+    console.log("📊 Updating charts with", userTrades.length, "trades");
+    
+    // تحديث الرسوم البيانية مع تأخير لضمان عرض العناصر
+    setTimeout(() => {
+        updateWinLossChart();
+        updateSessionChart();
+        updateAssetChart();
+        updateProfitChart();
+        updateCapitalChart();
+    }, 300);
 }
 
 function updateWinLossChart() {
     const canvas = document.getElementById('winLossChart');
-    if (!canvas) return;
+    if (!canvas) {
+        console.log("❌ winLossChart canvas not found");
+        return;
+    }
     
-    const ctx = canvas.getContext('2d');
+    // تنظيف الرسم البياني السابق
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
         existingChart.destroy();
@@ -1877,45 +1914,60 @@ function updateWinLossChart() {
     
     const stats = calculateStats(userTrades);
     
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['صفقات رابحة', 'صفقات خاسرة'],
-            datasets: [{
-                data: [stats.winningTrades, stats.losingTrades],
-                backgroundColor: ['#4CAF50', '#F44336'],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: {
-                            family: 'Cairo, sans-serif'
+    // تأكد من وجود بيانات
+    if (stats.winningTrades === 0 && stats.losingTrades === 0) {
+        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+        return;
+    }
+    
+    try {
+        new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['صفقات رابحة', 'صفقات خاسرة'],
+                datasets: [{
+                    data: [stats.winningTrades, stats.losingTrades],
+                    backgroundColor: ['#4CAF50', '#F44336'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
                         }
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'نسبة الربح والخسارة',
-                    font: {
-                        family: 'Cairo, sans-serif',
-                        size: 14
+                    },
+                    title: {
+                        display: true,
+                        text: 'نسبة الربح والخسارة',
+                        font: {
+                            family: 'Cairo, sans-serif',
+                            size: 14
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+        console.log("✅ winLossChart updated");
+    } catch (error) {
+        console.error("❌ Error updating winLossChart:", error);
+    }
 }
 
 function updateSessionChart() {
     const canvas = document.getElementById('sessionChart');
-    if (!canvas) return;
+    if (!canvas) {
+        console.log("❌ sessionChart canvas not found");
+        return;
+    }
     
-    const ctx = canvas.getContext('2d');
+    // تنظيف الرسم البياني السابق
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
         existingChart.destroy();
@@ -1932,59 +1984,74 @@ function updateSessionChart() {
     const sessions = Object.keys(sessionData);
     const counts = Object.values(sessionData);
     
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: sessions,
-            datasets: [{
-                label: 'عدد الصفقات',
-                data: counts,
-                backgroundColor: '#667eea',
-                borderColor: '#667eea',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: true,
-                    text: 'الصفقات حسب الجلسة',
-                    font: {
-                        family: 'Cairo, sans-serif',
-                        size: 14
-                    }
-                }
+    // تأكد من وجود بيانات
+    if (sessions.length === 0) {
+        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+        return;
+    }
+    
+    try {
+        new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: sessions,
+                datasets: [{
+                    label: 'عدد الصفقات',
+                    data: counts,
+                    backgroundColor: '#667eea',
+                    borderColor: '#667eea',
+                    borderWidth: 1
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'الصفقات حسب الجلسة',
                         font: {
-                            family: 'Cairo, sans-serif'
+                            family: 'Cairo, sans-serif',
+                            size: 14
                         }
                     }
                 },
-                x: {
-                    ticks: {
-                        font: {
-                            family: 'Cairo, sans-serif'
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+        console.log("✅ sessionChart updated");
+    } catch (error) {
+        console.error("❌ Error updating sessionChart:", error);
+    }
 }
 
 function updateAssetChart() {
     const canvas = document.getElementById('assetChart');
-    if (!canvas) return;
+    if (!canvas) {
+        console.log("❌ assetChart canvas not found");
+        return;
+    }
     
-    const ctx = canvas.getContext('2d');
+    // تنظيف الرسم البياني السابق
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
         existingChart.destroy();
@@ -2001,51 +2068,66 @@ function updateAssetChart() {
     const assets = Object.keys(assetData);
     const counts = Object.values(assetData);
     
+    // تأكد من وجود بيانات
+    if (assets.length === 0) {
+        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+        return;
+    }
+    
     // توليد ألوان متعددة
     const backgroundColors = [
         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
         '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
     ];
     
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: assets,
-            datasets: [{
-                data: counts,
-                backgroundColor: backgroundColors.slice(0, assets.length),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        font: {
-                            family: 'Cairo, sans-serif'
+    try {
+        new Chart(canvas, {
+            type: 'pie',
+            data: {
+                labels: assets,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: backgroundColors.slice(0, assets.length),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
                         }
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'توزيع الصفقات حسب الأصل',
-                    font: {
-                        family: 'Cairo, sans-serif',
-                        size: 14
+                    },
+                    title: {
+                        display: true,
+                        text: 'توزيع الصفقات حسب الأصل',
+                        font: {
+                            family: 'Cairo, sans-serif',
+                            size: 14
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+        console.log("✅ assetChart updated");
+    } catch (error) {
+        console.error("❌ Error updating assetChart:", error);
+    }
 }
 
 function updateProfitChart() {
     const canvas = document.getElementById('profitChart');
-    if (!canvas) return;
+    if (!canvas) {
+        console.log("❌ profitChart canvas not found");
+        return;
+    }
     
-    const ctx = canvas.getContext('2d');
+    // تنظيف الرسم البياني السابق
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
         existingChart.destroy();
@@ -2081,64 +2163,79 @@ function updateProfitChart() {
         profitData.push(dayProfit);
     }
     
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: last7Days,
-            datasets: [{
-                label: 'صافي الربح اليومي',
-                data: profitData,
-                borderColor: '#4CAF50',
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    labels: {
-                        font: {
-                            family: 'Cairo, sans-serif'
-                        }
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'تطور الأرباح خلال الأسبوع',
-                    font: {
-                        family: 'Cairo, sans-serif',
-                        size: 14
-                    }
-                }
+    // تأكد من وجود بيانات
+    if (profitData.length === 0 || profitData.every(val => val === 0)) {
+        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+        return;
+    }
+    
+    try {
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: last7Days,
+                datasets: [{
+                    label: 'صافي الربح اليومي',
+                    data: profitData,
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
             },
-            scales: {
-                y: {
-                    ticks: {
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'تطور الأرباح خلال الأسبوع',
                         font: {
-                            family: 'Cairo, sans-serif'
+                            family: 'Cairo, sans-serif',
+                            size: 14
                         }
                     }
                 },
-                x: {
-                    ticks: {
-                        font: {
-                            family: 'Cairo, sans-serif'
+                scales: {
+                    y: {
+                        ticks: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+        console.log("✅ profitChart updated");
+    } catch (error) {
+        console.error("❌ Error updating profitChart:", error);
+    }
 }
 
 function updateCapitalChart() {
     const canvas = document.getElementById('capitalChart');
-    if (!canvas) return;
+    if (!canvas) {
+        console.log("❌ capitalChart canvas not found");
+        return;
+    }
     
-    const ctx = canvas.getContext('2d');
+    // تنظيف الرسم البياني السابق
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
         existingChart.destroy();
@@ -2162,57 +2259,69 @@ function updateCapitalChart() {
         capitalDates.push(`صفقة ${index + 1}`);
     });
     
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: capitalDates,
-            datasets: [{
-                label: 'رأس المال',
-                data: capitalData,
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    labels: {
-                        font: {
-                            family: 'Cairo, sans-serif'
-                        }
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'تطور رأس المال',
-                    font: {
-                        family: 'Cairo, sans-serif',
-                        size: 14
-                    }
-                }
+    // تأكد من وجود بيانات
+    if (capitalData.length <= 1) {
+        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+        return;
+    }
+    
+    try {
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: capitalDates,
+                datasets: [{
+                    label: 'رأس المال',
+                    data: capitalData,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
             },
-            scales: {
-                y: {
-                    ticks: {
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'تطور رأس المال',
                         font: {
-                            family: 'Cairo, sans-serif'
+                            family: 'Cairo, sans-serif',
+                            size: 14
                         }
                     }
                 },
-                x: {
-                    ticks: {
-                        font: {
-                            family: 'Cairo, sans-serif'
+                scales: {
+                    y: {
+                        ticks: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                family: 'Cairo, sans-serif'
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+        console.log("✅ capitalChart updated");
+    } catch (error) {
+        console.error("❌ Error updating capitalChart:", error);
+    }
 }
 
 // ========== دوال الأداء ==========
@@ -2227,7 +2336,6 @@ function updateMonthlyTradesChart() {
     const canvas = document.getElementById('monthlyTradesChart');
     if (!canvas) return;
     
-    const ctx = canvas.getContext('2d');
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
         existingChart.destroy();
@@ -2262,7 +2370,13 @@ function updateMonthlyTradesChart() {
     });
     const counts = sortedKeys.map(key => monthlyData[key]);
     
-    new Chart(ctx, {
+    // تأكد من وجود بيانات
+    if (months.length === 0) {
+        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+        return;
+    }
+    
+    new Chart(canvas, {
         type: 'bar',
         data: {
             labels: months,
@@ -2276,6 +2390,7 @@ function updateMonthlyTradesChart() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: false
@@ -2314,7 +2429,6 @@ function updateMonthlySuccessChart() {
     const canvas = document.getElementById('monthlySuccessChart');
     if (!canvas) return;
     
-    const ctx = canvas.getContext('2d');
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
         existingChart.destroy();
@@ -2359,7 +2473,13 @@ function updateMonthlySuccessChart() {
         return data.total > 0 ? (data.wins / data.total) * 100 : 0;
     });
     
-    new Chart(ctx, {
+    // تأكد من وجود بيانات
+    if (months.length === 0) {
+        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+        return;
+    }
+    
+    new Chart(canvas, {
         type: 'line',
         data: {
             labels: months,
@@ -2375,6 +2495,7 @@ function updateMonthlySuccessChart() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     labels: {
