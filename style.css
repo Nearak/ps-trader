@@ -1,3 +1,39 @@
+/* Scoped – لن يؤثر على أي عنصر آخر */
+.safe-link-btn {
+  all: unset;                 /* يلغي أي ستايل خارجي */
+  display: inline-block;
+  cursor: pointer;
+
+  padding: 12px 22px;
+  background: #2563eb;
+  color: #ffffff;
+
+  font-size: 18px;
+  font-weight: 600;
+  font-family: Arial, sans-serif;
+
+  border-radius: 10px;
+  text-align: center;
+
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.safe-link-btn:hover {
+  background: #1e40af;
+  transform: translateY(-2px);
+}
+
+.safe-link-btn:active {
+  transform: scale(0.97);
+}
+
+
+
+
+
+
+
+
 /* أنماط عامة */
 * {
     margin: 0;
