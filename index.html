@@ -3,413 +3,408 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سجل صفقات التداول - النظام المتكامل</title>
+    <title>PSTrader - نظام تتبع الصفقات</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="user-info" id="userInfo" style="display: none;">
-                <div class="user-details">
-                    <span id="userGreeting">مرحباً، </span>
-                    <div class="capital-info">
-                        <span>رأس المال: $<span id="userCapital">0</span></span>
-                        <button id="editCapitalBtn"><i class="fas fa-edit"></i></button>
-                    </div>
-                </div>
-                <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
-            </div>
-            <div class="header-content">
-                <h1><i class="fas fa-chart-line"></i> سجل صفقات التداول المتكامل</h1>
-                <p>أداة متكاملة لتسجيل وتحليل أداء صفقاتك في التداول</p>
-            </div>
-        </header>
-        
-        <section class="auth-section" id="authSection">
-            <div class="auth-tabs">
-                <div class="auth-tab active" data-form="login">تسجيل الدخول</div>
-                <div class="auth-tab" data-form="register">إنشاء حساب</div>
+    <!-- شريط التنقل العلوي -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-chart-line"></i>
+            <span>PSTrader</span>
+        </div>
+        <div class="nav-user" id="userInfo" style="display: none;">
+            <span id="userGreeting">مرحباً، محمد</span>
+            <span class="capital-badge">رأس المال: <span id="userCapital">$10,000</span></span>
+            <button id="logoutBtn" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> تسجيل خروج
+            </button>
+        </div>
+    </nav>
+
+    <!-- قسم المصادقة -->
+    <section id="authSection" class="auth-section">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1><i class="fas fa-chart-line"></i> نظام تتبع الصفقات</h1>
+                <p>قم بتسجيل الدخول للوصول إلى نظام تتبع الصفقات الخاص بك</p>
             </div>
             
-            <div class="auth-form active" id="loginForm">
-                <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
-                <div class="alert" id="loginAlert"></div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-form="login">تسجيل الدخول</button>
+                <button class="auth-tab" data-form="register">إنشاء حساب</button>
+            </div>
+            
+            <!-- نموذج تسجيل الدخول -->
+            <div id="loginForm" class="auth-form active">
                 <form id="loginUserForm">
                     <div class="form-group">
-                        <label for="loginEmail">البريد الإلكتروني</label>
-                        <input type="email" id="loginEmail" required>
+                        <label for="loginEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                        <input type="email" id="loginEmail" required placeholder="أدخل بريدك الإلكتروني">
                     </div>
                     
                     <div class="form-group">
-                        <label for="loginPassword">كلمة المرور</label>
-                        <input type="password" id="loginPassword" required>
+                        <label for="loginPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
+                        <input type="password" id="loginPassword" required placeholder="أدخل كلمة المرور">
                     </div>
                     
-                    <button type="submit"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
+                    <div id="loginAlert" class="alert" style="display: none;"></div>
+                    
+                    <button type="submit" class="btn-auth">
+                        <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                    </button>
                 </form>
             </div>
             
-            <div class="auth-form" id="registerForm">
-                <h2><i class="fas fa-user-plus"></i> إنشاء حساب جديد</h2>
-                <div class="alert" id="registerAlert"></div>
+            <!-- نموذج إنشاء حساب -->
+            <div id="registerForm" class="auth-form">
                 <form id="registerUserForm">
                     <div class="form-group">
-                        <label for="registerName">الاسم الكامل</label>
-                        <input type="text" id="registerName" required>
+                        <label for="registerName"><i class="fas fa-user"></i> الاسم الكامل</label>
+                        <input type="text" id="registerName" required placeholder="أدخل اسمك الكامل">
                     </div>
                     
                     <div class="form-group">
-                        <label for="registerEmail">البريد الإلكتروني</label>
-                        <input type="email" id="registerEmail" required>
+                        <label for="registerEmail"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                        <input type="email" id="registerEmail" required placeholder="أدخل بريدك الإلكتروني">
                     </div>
                     
                     <div class="form-group">
-                        <label for="registerPassword">كلمة المرور</label>
-                        <input type="password" id="registerPassword" minlength="6" required>
+                        <label for="registerPassword"><i class="fas fa-lock"></i> كلمة المرور</label>
+                        <input type="password" id="registerPassword" required placeholder="أدخل كلمة المرور (6 أحرف على الأقل)">
                     </div>
                     
                     <div class="form-group">
-                        <label for="registerConfirmPassword">تأكيد كلمة المرور</label>
-                        <input type="password" id="registerConfirmPassword" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="initialCapital">رأس المال الابتدائي ($)</label>
-                        <input type="number" id="initialCapital" placeholder="أدخل رأس المال الذي ستبدأ به" min="0" step="0.01" value="1000" required>
+                        <label for="registerConfirmPassword"><i class="fas fa-lock"></i> تأكيد كلمة المرور</label>
+                        <input type="password" id="registerConfirmPassword" required placeholder="أعد إدخال كلمة المرور">
                     </div>
                     
-                    <button type="submit"><i class="fas fa-user-plus"></i> إنشاء حساب</button>
+                    <div class="form-group">
+                        <label for="initialCapital"><i class="fas fa-money-bill-wave"></i> رأس المال الابتدائي ($)</label>
+                        <input type="number" id="initialCapital" value="1000" min="1" step="1" required placeholder="أدخل رأس المال الابتدائي">
+                    </div>
+                    
+                    <div id="registerAlert" class="alert" style="display: none;"></div>
+                    
+                    <button type="submit" class="btn-auth">
+                        <i class="fas fa-user-plus"></i> إنشاء حساب
+                    </button>
                 </form>
             </div>
-        </section>
-        
-        <div class="app-content" id="appContent">
-            <!-- Modal تعديل رأس المال -->
-            <div id="capitalModal" class="modal">
-                <div class="modal-content">
-                    <span class="close">&times;</span>
-                    <h3><i class="fas fa-money-bill-wave"></i> تعديل رأس المال</h3>
-                    <div class="form-group">
-                        <label for="newCapital">رأس المال الجديد ($)</label>
-                        <input type="number" id="newCapital" min="0" step="0.01" required>
+        </div>
+    </section>
+
+    <!-- المحتوى الرئيسي -->
+    <main id="appContent" class="app-content" style="display: none;">
+        <!-- التبويبات الرئيسية -->
+        <div class="tabs">
+            <button class="tab active" data-tab="trades">
+                <i class="fas fa-plus-circle"></i> إضافة صفقة
+            </button>
+            <button class="tab" data-tab="history">
+                <i class="fas fa-history"></i> سجل الصفقات
+            </button>
+            <button class="tab" data-tab="calendar">
+                <i class="fas fa-calendar-alt"></i> تقويم الصفقات
+            </button>
+            <button class="tab" data-tab="leaderboard">
+                <i class="fas fa-trophy"></i> لوحة المتصدرين
+            </button>
+            <button class="tab" data-tab="charts">
+                <i class="fas fa-chart-pie"></i> الرسوم البيانية
+            </button>
+            <button class="tab" data-tab="performance">
+                <i class="fas fa-chart-line"></i> الأداء
+            </button>
+            <button class="tab" data-tab="strategy">
+                <i class="fas fa-chess-board"></i> الاستراتيجية
+            </button>
+        </div>
+
+        <!-- محتوى التبويبات -->
+        <div class="tab-content-wrapper">
+            <!-- تبويب إضافة صفقة -->
+            <div id="trades-tab" class="tab-content active">
+                <h2 class="section-title"><i class="fas fa-plus-circle"></i> إضافة صفقة جديدة</h2>
+                <div class="card">
+                    <form id="tradeForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="asset"><i class="fas fa-coins"></i> الأصل</label>
+                                <select id="asset" required>
+                                    <option value="">اختر الأصل</option>
+                                    <option value="EUR/USD">EUR/USD</option>
+                                    <option value="GBP/USD">GBP/USD</option>
+                                    <option value="USD/JPY">USD/JPY</option>
+                                    <option value="XAU/USD">XAU/USD (الذهب)</option>
+                                    <option value="BTC/USD">BTC/USD (بتكوين)</option>
+                                    <option value="ETH/USD">ETH/USD (إيثيريوم)</option>
+                                    <option value="other">أخرى</option>
+                                </select>
+                                <input type="text" id="otherAsset" placeholder="أدخل اسم الأصل" style="display: none; margin-top: 8px;">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="tradeType"><i class="fas fa-exchange-alt"></i> نوع الصفقة</label>
+                                <select id="tradeType" required>
+                                    <option value="">اختر النوع</option>
+                                    <option value="شراء">شراء (Buy)</option>
+                                    <option value="بيع">بيع (Sell)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="session"><i class="fas fa-clock"></i> الجلسة</label>
+                                <select id="session" required>
+                                    <option value="">اختر الجلسة</option>
+                                    <option value="أسيوية">أسيوية</option>
+                                    <option value="أوروبية">أوروبية</option>
+                                    <option value="أمريكية">أمريكية</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="amount"><i class="fas fa-money-bill-wave"></i> المبلغ ($)</label>
+                                <input type="number" id="amount" min="1" step="0.01" required placeholder="أدخل المبلغ">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="result"><i class="fas fa-poll"></i> النتيجة</label>
+                                <select id="result" required>
+                                    <option value="">اختر النتيجة</option>
+                                    <option value="ربح">ربح</option>
+                                    <option value="خسارة">خسارة</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="profitLoss"><i class="fas fa-chart-line"></i> الربح/الخسارة ($)</label>
+                                <input type="number" id="profitLoss" step="0.01" required placeholder="أدخل المبلغ">
+                                <small style="color: #666;">استخدم قيمة سالبة للخسارة</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label for="tradeDate"><i class="fas fa-calendar"></i> تاريخ ووقت الصفقة</label>
+                                <input type="datetime-local" id="tradeDate" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label for="notes"><i class="fas fa-sticky-note"></i> ملاحظات (اختياري)</label>
+                                <textarea id="notes" rows="3" placeholder="أدخل ملاحظاتك عن الصفقة..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label for="tradeImage"><i class="fas fa-image"></i> صفقة الصفقة (اختياري)</label>
+                                <input type="file" id="tradeImage" accept="image/*">
+                                <div class="image-preview-container">
+                                    <img id="imagePreview" src="" alt="معاينة الصورة" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 5px;">
+                                    <button type="button" id="removeImageBtn" class="btn-icon" style="display: none; margin-top: 10px;">
+                                        <i class="fas fa-trash"></i> إزالة الصورة
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-save"></i> حفظ الصفقة
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- إحصائيات سريعة -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>إجمالي الصفقات</h4>
+                            <p id="totalTrades">0</p>
+                        </div>
                     </div>
-                    <button id="saveCapitalBtn"><i class="fas fa-save"></i> حفظ التغييرات</button>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>نسبة الفوز</h4>
+                            <p id="winRate">0%</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>إجمالي الأرباح</h4>
+                            <p id="totalProfit">$0.00</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>إجمالي الخسائر</h4>
+                            <p id="totalLoss">$0.00</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>صافي الربح</h4>
+                            <p id="netProfit">$0.00</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card" id="editCapitalBtn" style="cursor: pointer;">
+                        <div class="stat-icon">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h4>رأس المال الحالي</h4>
+                            <p id="currentCapitalDisplay">$0.00</p>
+                            <small>رأس المال الابتدائي: <span id="initialCapitalDisplay">$0.00</span></small>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="tabs">
-                <div class="tab active" data-tab="form">إضافة صفقة</div>
-                <div class="tab" data-tab="strategy">استراتيجيتي</div>
-                <div class="tab" data-tab="leaderboard">لوحة المتصدرين</div>
-                <div class="tab" data-tab="charts">الرسوم البيانية</div>
-                <div class="tab" data-tab="calendar">تقويم الصفقات</div>
-                <div class="tab" data-tab="list">قائمة الصفقات</div>
-                <div class="tab" data-tab="performance">أداء رأس المال</div>
-            </div>
-            
-            <div class="tab-content active" id="form-tab">
-                <div class="main-content">
-                    <section class="form-section">
-                        <h2><i class="fas fa-plus-circle"></i> إضافة صفقة جديدة</h2>
-                        <form id="tradeForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="tradeDate">تاريخ الصفقة</label>
-                                    <input type="datetime-local" id="tradeDate" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="asset">الأصل المتداول</label>
-                                    <select id="asset" required>
-                                        <option value="">اختر الأصل</option>
-                                        <!-- العملات الرقمية -->
-                                        <option value="BTC">Bitcoin (BTC)</option>
-                                        <option value="ETH">Ethereum (ETH)</option>
-                                        <option value="BNB">Binance Coin (BNB)</option>
-                                        <option value="XRP">Ripple (XRP)</option>
-                                        <option value="ADA">Cardano (ADA)</option>
-                                        <option value="SOL">Solana (SOL)</option>
-                                        <option value="DOT">Polkadot (DOT)</option>
-                                        <option value="DOGE">Dogecoin (DOGE)</option>
-                                        <option value="AVAX">Avalanche (AVAX)</option>
-                                        <option value="MATIC">Polygon (MATIC)</option>
-                                        
-                                        <!-- السلع -->
-                                        <option value="GOLD">الذهب</option>
-                                        <option value="SILVER">الفضة</option>
-                                        <option value="OIL">النفط</option>
-                                        <option value="GAS">الغاز الطبيعي</option>
-                                        <option value="COPPER">النحاس</option>
-                                        <option value="PLATINUM">البلاتين</option>
-                                        
-                                        <!-- أزواج العملات -->
-                                        <option value="EUR/USD">يورو/دولار</option>
-                                        <option value="GBP/USD">جنيه إسترليني/دولار</option>
-                                        <option value="USD/JPY">دولار/ين ياباني</option>
-                                        <option value="USD/CHF">دولار/فرنك سويسري</option>
-                                        <option value="AUD/USD">دولار أسترالي/دولار</option>
-                                        <option value="USD/CAD">دولار/دولار كندي</option>
-                                        <option value="NZD/USD">دولار نيوزيلندي/دولار</option>
-                                        
-                                        <!-- المؤشرات -->
-                                        <option value="S&P500">S&P 500</option>
-                                        <option value="DOW30">Dow Jones 30</option>
-                                        <option value="NASDAQ">NASDAQ</option>
-                                        <option value="FTSE100">FTSE 100</option>
-                                        <option value="DAX30">DAX 30</option>
-                                        <option value="NIKKEI225">Nikkei 225</option>
-                                        
-                                        <!-- الأسهم -->
-                                        <option value="AAPL">Apple (AAPL)</option>
-                                        <option value="TSLA">Tesla (TSLA)</option>
-                                        <option value="AMZN">Amazon (AMZN)</option>
-                                        <option value="GOOGL">Google (GOOGL)</option>
-                                        <option value="MSFT">Microsoft (MSFT)</option>
-                                        <option value="META">Meta (META)</option>
-                                        <option value="NFLX">Netflix (NFLX)</option>
-                                        <option value="NVDA">NVIDIA (NVDA)</option>
-                                        
-                                        <option value="other">أخرى</option>
-                                    </select>
-                                    <input type="text" id="otherAsset" placeholder="اذكر الأصل" style="display: none; margin-top: 5px;">
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="tradeType">نوع الصفقة</label>
-                                    <select id="tradeType" required>
-                                        <option value="شراء">شراء</option>
-                                        <option value="بيع">بيع</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="session">جلسة التداول</label>
-                                    <select id="session" required>
-                                        <option value="آسيا">جلسة آسيا</option>
-                                        <option value="لندن">جلسة لندن</option>
-                                        <option value="نيويورك">جلسة نيويورك</option>
-                                        <option value="أخرى">جلسة أخرى</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="amount">قيمة الصفقة ($)</label>
-                                    <input type="number" id="amount" placeholder="أدخل المبلغ بالدولار" min="0" step="0.01" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="result">نتيجة الصفقة</label>
-                                    <select id="result" required>
-                                        <option value="ربح">ربح</option>
-                                        <option value="خسارة">خسارة</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="profitLoss">قيمة الربح/الخسارة ($)</label>
-                                <input type="number" id="profitLoss" placeholder="أدخل قيمة الربح/الخسارة" step="0.01" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="tradeImage">صورة الصفقة (اختياري)</label>
-                                <div class="file-input-container">
-                                    <input type="file" id="tradeImage" accept="image/*" class="file-input">
-                                    <label for="tradeImage" class="file-input-label">
-                                        <i class="fas fa-upload"></i> اختر صورة
-                                    </label>
-                                </div>
-                                <div class="image-preview" id="imagePreview" style="display: none;">
-                                    <img id="previewImage" src="#" alt="معاينة الصورة">
-                                    <button type="button" id="removeImageBtn" class="delete-btn"><i class="fas fa-times"></i></button>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="notes">ملاحظات حول الصفقة</label>
-                                <textarea id="notes" placeholder="أضف ملاحظاتك حول الصفقة، استراتيجية الدخول والخروج، الدروس المستفادة..." rows="3"></textarea>
-                            </div>
-                            
-                            <button type="submit" class="submit-btn"><i class="fas fa-save"></i> إضافة الصفقة</button>
-                        </form>
-                    </section>
-                    
-                    <section class="stats-section">
-                        <h2><i class="fas fa-chart-line"></i> إحصائيات التداول</h2>
-                        <div class="capital-stats">
-                            <div class="capital-card">
-                                <div class="capital-label">رأس المال الحالي</div>
-                                <div class="capital-value" id="currentCapital">$0</div>
-                            </div>
-                            <div class="capital-card">
-                                <div class="capital-label">إجمالي الأرباح/الخسائر</div>
-                                <div class="capital-value" id="totalPnL">$0</div>
-                            </div>
-                            <div class="capital-card">
-                                <div class="capital-label">نسبة العائد</div>
-                                <div class="capital-value" id="returnPercentage">0%</div>
-                            </div>
-                        </div>
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
-                                <div class="stat-label">إجمالي الصفقات</div>
-                                <div class="stat-value" id="totalTrades">0</div>
-                            </div>
-                            
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
-                                <div class="stat-label">الصفقات الرابحة</div>
-                                <div class="stat-value positive" id="winningTrades">0</div>
-                            </div>
-                            
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-                                <div class="stat-label">الصفقات الخاسرة</div>
-                                <div class="stat-value negative" id="losingTrades">0</div>
-                            </div>
-                            
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-percentage"></i></div>
-                                <div class="stat-label">نسبة النجاح</div>
-                                <div class="stat-value" id="successRate">0%</div>
-                            </div>
-                            
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
-                                <div class="stat-label">متوسط الربح</div>
-                                <div class="stat-value" id="averageProfit">$0</div>
-                            </div>
-                            
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
-                                <div class="stat-label">متوسط الخسارة</div>
-                                <div class="stat-value" id="averageLoss">$0</div>
-                            </div>
-                            
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                                <div class="stat-label">أفضل جلسة</div>
-                                <div class="stat-value" id="bestSession">-</div>
-                            </div>
-                            
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-coins"></i></div>
-                                <div class="stat-label">أفضل أصل</div>
-                                <div class="stat-value" id="bestAsset">-</div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-            
-            <div class="tab-content" id="strategy-tab">
-                <section class="strategy-section">
-                    <h2><i class="fas fa-chess-knight"></i> استراتيجية التداول الخاصة بي</h2>
-                    <div class="strategy-intro">
-                        <p>هنا يمكنك كتابة وتطوير استراتيجية التداول الخاصة بك. استخدم هذه المساحة لتحديد قواعد الدخول والخروج، إدارة المخاطر، والأهداف.</p>
-                    </div>
-                    
-                    <div class="strategy-form">
-                        <div class="form-group">
-                            <label for="strategyTitle">عنوان الاستراتيجية</label>
-                            <input type="text" id="strategyTitle" placeholder="أدخل عنواناً لاستراتيجيتك">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="tradingStyle">نمط التداول</label>
-                            <select id="tradingStyle">
-                                <option value="">اختر نمط التداول</option>
-                                <option value="scalping">سكالبينج (Scalping)</option>
-                                <option value="day">تداول يومي (Day Trading)</option>
-                                <option value="swing">تداول أرجوحي (Swing Trading)</option>
-                                <option value="position">تداول مراكز (Position Trading)</option>
-                                <option value="investing">استثمار طويل الأجل</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="timeframe">الإطار الزمني المفضل</label>
-                            <select id="timeframe">
-                                <option value="">اختر الإطار الزمني</option>
-                                <option value="1m">1 دقيقة</option>
-                                <option value="5m">5 دقائق</option>
-                                <option value="15m">15 دقيقة</option>
-                                <option value="1h">1 ساعة</option>
-                                <option value="4h">4 ساعات</option>
-                                <option value="1d">يومي</option>
-                                <option value="1w">أسبوعي</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="riskPerTrade">نسبة المخاطرة لكل صفقة (%)</label>
-                            <input type="number" id="riskPerTrade" min="0" max="100" step="0.1" placeholder="مثال: 2">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="rewardRatio">نسبة العائد للمخاطرة</label>
-                            <input type="number" id="rewardRatio" min="0" step="0.1" placeholder="مثال: 2 (يعني 2:1)">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="entryRules">قواعد الدخول</label>
-                            <textarea id="entryRules" placeholder="صف شروط الدخول إلى الصفقات..." rows="4"></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="exitRules">قواعد الخروج</label>
-                            <textarea id="exitRules" placeholder="صف شروط الخروج من الصفقات..." rows="4"></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="riskManagement">إدارة المخاطر</label>
-                            <textarea id="riskManagement" placeholder="صف استراتيجية إدارة المخاطر..." rows="4"></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="psychologyNotes">ملاحظات نفسية</label>
-                            <textarea id="psychologyNotes" placeholder="اكتب ملاحظات حول الجانب النفسي في التداول..." rows="4"></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="strategyNotes">ملاحظات إضافية</label>
-                            <textarea id="strategyNotes" placeholder="أي ملاحظات إضافية حول الاستراتيجية..." rows="4"></textarea>
-                        </div>
-                        
-                        <button id="saveStrategyBtn" class="submit-btn"><i class="fas fa-save"></i> حفظ الاستراتيجية</button>
-                    </div>
-                    
-                    <div class="strategy-preview" id="strategyPreview">
-                        <h3><i class="fas fa-eye"></i> معاينة الاستراتيجية</h3>
-                        <div class="preview-content" id="previewContent">
-                            <p class="no-preview">لم يتم حفظ استراتيجية بعد. املأ النموذج أعلاه واحفظ استراتيجيتك.</p>
-                        </div>
-                    </div>
-                </section>
-            </div>
-            
-            <div class="tab-content" id="leaderboard-tab">
-                <section class="leaderboard-section">
-                    <h2><i class="fas fa-trophy"></i> لوحة المتصدرين</h2>
-                    <div class="leaderboard-intro">
-                        <p>تصنيف المتداولين بناءً على أدائهم. يمكنك مقارنة أدائك مع الآخرين وتحفيز نفسك للتحسين.</p>
-                    </div>
-                    
-                    <div class="leaderboard-filters">
+            <!-- تبويب سجل الصفقات -->
+            <div id="history-tab" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-history"></i> سجل الصفقات</h2>
+                <div class="card">
+                    <div class="filters">
                         <div class="filter-group">
-                            <label for="leaderboardType">نوع التصنيف:</label>
+                            <label for="filterAsset">تصفية حسب الأصل:</label>
+                            <select id="filterAsset">
+                                <option value="all">جميع الأصول</option>
+                                <option value="EUR/USD">EUR/USD</option>
+                                <option value="GBP/USD">GBP/USD</option>
+                                <option value="USD/JPY">USD/JPY</option>
+                                <option value="XAU/USD">XAU/USD (الذهب)</option>
+                                <option value="BTC/USD">BTC/USD (بتكوين)</option>
+                                <option value="ETH/USD">ETH/USD (إيثيريوم)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="filterSession">تصفية حسب الجلسة:</label>
+                            <select id="filterSession">
+                                <option value="all">جميع الجلسات</option>
+                                <option value="أسيوية">أسيوية</option>
+                                <option value="أوروبية">أوروبية</option>
+                                <option value="أمريكية">أمريكية</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="filterResult">تصفية حسب النتيجة:</label>
+                            <select id="filterResult">
+                                <option value="all">جميع النتائج</option>
+                                <option value="ربح">ربح</option>
+                                <option value="خسارة">خسارة</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="transactions-header">
+                        <h3>الصفقات (<span id="tradesCount">0</span>)</h3>
+                    </div>
+                    
+                    <div id="tradesList" class="transactions-list">
+                        <!-- سيتم ملؤها بواسطة JavaScript -->
+                        <div class="no-data">
+                            <i class="fas fa-chart-bar"></i>
+                            <p>لا توجد صفقات لعرضها</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تبويب تقويم الصفقات -->
+            <div id="calendar-tab" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-calendar-alt"></i> تقويم الصفقات</h2>
+                <div class="card">
+                    <div class="calendar-header">
+                        <button onclick="prevMonth()" class="btn-icon">
+                            <i class="fas fa-chevron-right"></i> الشهر السابق
+                        </button>
+                        <h3 id="calendarTitle">يناير 2024</h3>
+                        <button onclick="nextMonth()" class="btn-icon">
+                            الشهر التالي <i class="fas fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="calendarGrid" class="calendar-grid">
+                        <!-- سيتم ملؤها بواسطة JavaScript -->
+                    </div>
+                    
+                    <!-- مفتاح الألوان -->
+                    <div class="calendar-legend">
+                        <div class="legend-item">
+                            <div class="legend-color has-trades"></div>
+                            <span>يوم يحتوي على صفقات</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color positive"></div>
+                            <span>ربح إيجابي</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color negative"></div>
+                            <span>ربح سلبي</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- تفاصيل اليوم -->
+                <div id="day-details" class="card" style="display: none; margin-top: 20px;">
+                    <h3 id="selected-day">تفاصيل الصفقات ليوم</h3>
+                    <div id="day-trades-list">
+                        <!-- سيتم ملؤها بواسطة JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- تبويب لوحة المتصدرين -->
+            <div id="leaderboard-tab" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-trophy"></i> لوحة المتصدرين</h2>
+                
+                <div class="card">
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label for="leaderboardType">ترتيب حسب:</label>
                             <select id="leaderboardType">
-                                <option value="winRate">أعلى نسبة فوز</option>
-                                <option value="totalProfit">أعلى إجمالي أرباح</option>
-                                <option value="roi">أعلى عائد على الاستثمار</option>
-                                <option value="consistency">أعلى معدل اتساق</option>
+                                <option value="winRate">نسبة الفوز</option>
+                                <option value="totalProfit">إجمالي الأرباح</option>
+                                <option value="roi">نسبة العائد (ROI)</option>
+                                <option value="consistency">الاتساق</option>
+                                <option value="totalTrades">عدد الصفقات</option>
                             </select>
                         </div>
                         
@@ -417,234 +412,208 @@
                             <label for="timePeriod">الفترة الزمنية:</label>
                             <select id="timePeriod">
                                 <option value="all">جميع الفترات</option>
-                                <option value="month">آخر شهر</option>
-                                <option value="week">آخر أسبوع</option>
+                                <option value="today">اليوم</option>
+                                <option value="week">الأسبوع</option>
+                                <option value="month">الشهر</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="minTrades">الحد الأدنى للصفقات:</label>
+                            <select id="minTrades">
+                                <option value="0">أي عدد</option>
+                                <option value="10">10 صفقات</option>
+                                <option value="20">20 صفقة</option>
+                                <option value="50">50 صفقة</option>
                             </select>
                         </div>
                     </div>
                     
-                    <div class="leaderboard-stats">
-                        <div class="user-rank-card">
-                            <div class="rank-icon">
-                                <i class="fas fa-user"></i>
+                    <!-- إحصائيات عامة -->
+                    <div class="stats-grid mini">
+                        <div class="stat-card mini">
+                            <div class="stat-info">
+                                <h4>المتداولين النشطين</h4>
+                                <p id="totalTraders">0</p>
                             </div>
-                            <div class="rank-info">
-                                <h3>تصنيفك الحالي</h3>
-                                <div class="rank-value" id="userRank">-</div>
-                                <div class="rank-details" id="userRankDetails">-</div>
+                        </div>
+                        
+                        <div class="stat-card mini">
+                            <div class="stat-info">
+                                <h4>إجمالي الصفقات</h4>
+                                <p id="totalAllTrades">0</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card mini">
+                            <div class="stat-info">
+                                <h4>متوسط نسبة الفوز</h4>
+                                <p id="avgWinRate">0%</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card mini">
+                            <div class="stat-info">
+                                <h4>أعلى ربح</h4>
+                                <p id="highestProfit">$0.00</p>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="leaderboard-container">
-                        <div class="leaderboard-header">
-                            <div class="rank-col">المركز</div>
-                            <div class="name-col">المتداول</div>
-                            <div class="stats-col">نسبة الفوز</div>
-                            <div class="stats-col">إجمالي الأرباح</div>
-                            <div class="stats-col">العائد</div>
+                    <!-- تصنيف المستخدم -->
+                    <div class="user-rank-card">
+                        <div class="user-rank-header">
+                            <h4><i class="fas fa-user"></i> تصنيفك</h4>
+                            <span id="userRank" class="rank-badge">غير مصنف</span>
                         </div>
-                        <div class="leaderboard-list" id="leaderboardList">
-                            <div class="no-data">جاري تحميل البيانات...</div>
+                        <div id="userRankDetails" class="user-rank-details">
+                            ابدأ بالتداول للظهور في التصنيف
                         </div>
                     </div>
                     
-                    <div class="achievements-section">
-                        <h3><i class="fas fa-award"></i> الإنجازات</h3>
-                        <div class="achievements-grid" id="achievementsGrid">
-                            <div class="achievement-card locked">
-                                <div class="achievement-icon">
-                                    <i class="fas fa-rocket"></i>
-                                </div>
-                                <div class="achievement-info">
-                                    <h4>المتداول المبتدئ</h4>
-                                    <p>إكمال 10 صفقات</p>
-                                    <div class="progress-bar">
-                                        <div class="progress" style="width: 30%"></div>
-                                    </div>
-                                    <span class="progress-text">3/10</span>
-                                </div>
-                            </div>
-                            
-                            <div class="achievement-card locked">
-                                <div class="achievement-icon">
-                                    <i class="fas fa-chart-line"></i>
-                                </div>
-                                <div class="achievement-info">
-                                    <h4>محترف الربح</h4>
-                                    <p>تحقيق $1000 ربح</p>
-                                    <div class="progress-bar">
-                                        <div class="progress" style="width: 15%"></div>
-                                    </div>
-                                    <span class="progress-text">$150/$1000</span>
-                                </div>
-                            </div>
-                            
-                            <div class="achievement-card locked">
-                                <div class="achievement-icon">
-                                    <i class="fas fa-shield-alt"></i>
-                                </div>
-                                <div class="achievement-info">
-                                    <h4>مدير المخاطر</h4>
-                                    <p>نسبة فوز 70% أو أكثر</p>
-                                    <div class="progress-bar">
-                                        <div class="progress" style="width: 45%"></div>
-                                    </div>
-                                    <span class="progress-text">45%/70%</span>
-                                </div>
-                            </div>
+                    <!-- قائمة المتصدرين -->
+                    <div class="leaderboard-header">
+                        <div class="rank-col">الترتيب</div>
+                        <div class="name-col">المتداول</div>
+                        <div class="stats-col">الصفقات</div>
+                        <div class="stats-col">الفوز%</div>
+                        <div class="stats-col">الأرباح</div>
+                        <div class="stats-col">ROI%</div>
+                    </div>
+                    
+                    <div id="leaderboardList" class="leaderboard-list">
+                        <!-- سيتم ملؤها بواسطة JavaScript -->
+                        <div class="no-data">
+                            <i class="fas fa-trophy"></i>
+                            <p>جاري تحميل بيانات المتصدرين...</p>
                         </div>
                     </div>
-                </section>
+                </div>
+                
+                <!-- الإنجازات -->
+                <div class="card" style="margin-top: 20px;">
+                    <h3><i class="fas fa-award"></i> الإنجازات</h3>
+                    <div id="achievementsGrid" class="achievements-grid">
+                        <!-- سيتم ملؤها بواسطة JavaScript -->
+                    </div>
+                </div>
             </div>
-            
-            <div class="tab-content" id="charts-tab">
-                <section class="charts-section">
-                    <h2><i class="fas fa-chart-bar"></i> الرسوم البيانية والإحصائيات</h2>
-                    <div class="charts-grid">
+
+            <!-- تبويب الرسوم البيانية -->
+            <div id="charts-tab" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-chart-pie"></i> الرسوم البيانية</h2>
+                
+                <div class="charts-grid">
+                    <div class="chart-card">
                         <div class="chart-container">
-                            <h3>توزيع الصفقات (ربح/خسارة)</h3>
                             <canvas id="winLossChart"></canvas>
                         </div>
-                        
+                    </div>
+                    
+                    <div class="chart-card">
                         <div class="chart-container">
-                            <h3>الأداء حسب جلسات التداول</h3>
                             <canvas id="sessionChart"></canvas>
                         </div>
-                        
+                    </div>
+                    
+                    <div class="chart-card">
                         <div class="chart-container">
-                            <h3>الأداء حسب الأصول</h3>
                             <canvas id="assetChart"></canvas>
                         </div>
-                        
+                    </div>
+                    
+                    <div class="chart-card">
                         <div class="chart-container">
-                            <h3>تطور الأرباح عبر الزمن</h3>
                             <canvas id="profitChart"></canvas>
                         </div>
                     </div>
-                </section>
-            </div>
-            
-            <div class="tab-content" id="calendar-tab">
-                <section class="calendar-section">
-                    <h2><i class="fas fa-calendar-alt"></i> تقويم الصفقات</h2>
-                    <div class="calendar-controls">
-                        <div class="calendar-header">
-                            <h3 id="calendar-month-year">شهر سنة</h3>
-                            <div class="calendar-nav">
-                                <button id="prev-month"><i class="fas fa-chevron-right"></i> الشهر السابق</button>
-                                <button id="current-month">الشهر الحالي</button>
-                                <button id="next-month">الشهر التالي <i class="fas fa-chevron-left"></i></button>
-                            </div>
-                        </div>
-                        <div class="calendar-view-toggle">
-                            <button class="view-btn active" data-view="month">عرض شهري</button>
-                            <button class="view-btn" data-view="week">عرض أسبوعي</button>
+                    
+                    <div class="chart-card">
+                        <div class="chart-container">
+                            <canvas id="capitalChart"></canvas>
                         </div>
                     </div>
-                    <div class="calendar-view">
-                        <div class="calendar-grid" id="calendar-days">
-                            <!-- سيتم ملء التقويم بالجافاسكريبت -->
-                        </div>
-                        <div class="week-view" id="week-view" style="display: none;">
-                            <!-- سيتم ملء العرض الأسبوعي بالجافاسكريبت -->
-                        </div>
-                    </div>
-                    <div class="day-details" id="day-details">
-                        <h3 id="selected-day">تفاصيل الصفقات ليوم</h3>
-                        <div class="day-trades" id="day-trades-list">
-                            <!-- سيتم ملء تفاصيل الصفقات بالجافاسكريبت -->
-                        </div>
-                    </div>
-                </section>
-            </div>
-            
-            <div class="tab-content" id="list-tab">
-                <section class="transactions-section">
-                    <h2><i class="fas fa-list"></i> سجل الصفقات</h2>
-                    <div class="filters">
-                        <select id="filterAsset">
-                            <option value="">جميع الأصول</option>
-                        </select>
-                        <select id="filterSession">
-                            <option value="">جميع الجلسات</option>
-                            <option value="آسيا">جلسة آسيا</option>
-                            <option value="لندن">جلسة لندن</option>
-                            <option value="نيويورك">جلسة نيويورك</option>
-                            <option value="أخرى">جلسة أخرى</option>
-                        </select>
-                        <select id="filterResult">
-                            <option value="">جميع النتائج</option>
-                            <option value="ربح">الصفقات الرابحة</option>
-                            <option value="خسارة">الصفقات الخاسرة</option>
-                        </select>
-                    </div>
-                    <div id="transactionsList">
-                        <p class="no-transactions">لا توجد صفقات مسجلة بعد. ابدأ بإضافة أول صفقة.</p>
-                    </div>
-                </section>
+                </div>
             </div>
 
-            <div class="tab-content" id="performance-tab">
-                <section class="performance-section">
-                    <h2><i class="fas fa-tachometer-alt"></i> أداء رأس المال</h2>
-                    <div class="performance-stats">
-                        <div class="performance-card">
-                            <div class="performance-icon"><i class="fas fa-wallet"></i></div>
-                            <h3>رأس المال الابتدائي</h3>
-                            <div class="performance-value" id="initialCapitalDisplay">$0</div>
-                        </div>
-                        <div class="performance-card">
-                            <div class="performance-icon"><i class="fas fa-chart-line"></i></div>
-                            <h3>رأس المال الحالي</h3>
-                            <div class="performance-value" id="currentCapitalDisplay">$0</div>
-                        </div>
-                        <div class="performance-card">
-                            <div class="performance-icon"><i class="fas fa-money-bill-wave"></i></div>
-                            <h3>صافي الربح/الخسارة</h3>
-                            <div class="performance-value" id="netPnLDisplay">$0</div>
-                        </div>
-                        <div class="performance-card">
-                            <div class="performance-icon"><i class="fas fa-percentage"></i></div>
-                            <h3>نسبة العودة</h3>
-                            <div class="performance-value" id="roiDisplay">0%</div>
-                        </div>
-                    </div>
-                    <div class="chart-container full-width">
-                        <h3>تطور رأس المال مع الزمن</h3>
-                        <canvas id="capitalChart"></canvas>
-                    </div>
-                    <div class="performance-grid">
+            <!-- تبويب الأداء -->
+            <div id="performance-tab" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-chart-line"></i> تحليل الأداء</h2>
+                
+                <div class="charts-grid">
+                    <div class="chart-card large">
                         <div class="chart-container">
-                            <h3>توزيع الصفقات الشهري</h3>
                             <canvas id="monthlyTradesChart"></canvas>
                         </div>
+                    </div>
+                    
+                    <div class="chart-card large">
                         <div class="chart-container">
-                            <h3>معدل النجاح الشهري</h3>
                             <canvas id="monthlySuccessChart"></canvas>
                         </div>
                     </div>
-                </section>
+                </div>
+            </div>
+
+            <!-- تبويب الاستراتيجية -->
+            <div id="strategy-tab" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-chess-board"></i> إستراتيجية التداول</h2>
+                
+                <div class="card">
+                    <div class="strategy-editor">
+                        <div class="form-group full-width">
+                            <label for="strategyText"><i class="fas fa-edit"></i> إستراتيجيتك الخاصة</label>
+                            <textarea id="strategyText" rows="10" placeholder="اكتب إستراتيجية التداول الخاصة بك هنا..."></textarea>
+                        </div>
+                        
+                        <button id="saveStrategyBtn" class="btn-primary">
+                            <i class="fas fa-save"></i> حفظ الاستراتيجية
+                        </button>
+                    </div>
+                    
+                    <div class="strategy-preview">
+                        <h3><i class="fas fa-eye"></i> معاينة الاستراتيجية</h3>
+                        <div id="strategyPreview" class="preview-content">
+                            <!-- سيتم ملؤها بواسطة JavaScript -->
+                            <p class="no-data">لم تقم بكتابة استراتيجية بعد</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- Modal عرض الصورة -->
+    <!-- Modals -->
+    <!-- صورة الصفقة -->
     <div id="imageModal" class="modal">
-        <div class="modal-content image-modal">
+        <div class="modal-content">
             <span class="close">&times;</span>
             <img id="modalImage" src="" alt="صورة الصفقة">
         </div>
     </div>
 
-    <!-- Modal عرض الملاحظات -->
+    <!-- ملاحظات الصفقة -->
     <div id="notesModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h3><i class="fas fa-sticky-note"></i> الملاحظات الكاملة</h3>
-            <div id="notesContent" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0; line-height: 1.6;"></div>
-            <button class="submit-btn" onclick="document.getElementById('notesModal').style.display='none'">
-                <i class="fas fa-times"></i> إغلاق
+            <h3>ملاحظات الصفقة</h3>
+            <p id="notesContent"></p>
+        </div>
+    </div>
+
+    <!-- تعديل رأس المال -->
+    <div id="capitalModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3><i class="fas fa-edit"></i> تعديل رأس المال</h3>
+            
+            <div class="form-group">
+                <label for="currentCapital">رأس المال الحالي ($)</label>
+                <input type="number" id="currentCapital" min="0" step="0.01" required>
+            </div>
+            
+            <button id="saveCapitalBtn" class="btn-primary">
+                <i class="fas fa-save"></i> حفظ التغييرات
             </button>
         </div>
     </div>
