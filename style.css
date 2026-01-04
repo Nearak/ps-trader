@@ -762,6 +762,360 @@ body {
     height: 100% !important;
 }
 
+/* ========== أنماط التحليل الذكي ========== */
+.analysis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.analysis-intro {
+    flex: 1;
+}
+
+.analysis-intro h3 {
+    color: #333;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.analysis-intro p {
+    color: #666;
+    line-height: 1.6;
+}
+
+.analysis-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 25px;
+}
+
+.analysis-card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border-top: 4px solid #667eea;
+    transition: transform 0.3s;
+}
+
+.analysis-card:hover {
+    transform: translateY(-5px);
+}
+
+.analysis-card.warning {
+    border-top-color: #f44336;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+}
+
+.analysis-card h3 {
+    color: #333;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+}
+
+.analysis-details {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.analysis-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.analysis-item:last-child {
+    border-bottom: none;
+}
+
+.analysis-item .label {
+    color: #666;
+    font-weight: bold;
+}
+
+.analysis-item .value {
+    color: #333;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.analysis-patterns,
+.analysis-suggestions {
+    margin-top: 20px;
+}
+
+.analysis-patterns h4,
+.analysis-suggestions h4 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.analysis-patterns ul,
+.analysis-suggestions ul {
+    margin: 0;
+    padding-right: 20px;
+}
+
+.analysis-patterns li {
+    margin-bottom: 8px;
+    color: #555;
+    line-height: 1.5;
+}
+
+.analysis-suggestions li {
+    margin-bottom: 8px;
+    color: #4CAF50;
+    font-weight: bold;
+    line-height: 1.5;
+}
+
+/* نصائح تحسين نسبة الفوز */
+.tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.tip-card {
+    background: #f0f4ff;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.tip-card:hover {
+    border-color: #667eea;
+    transform: translateY(-3px);
+}
+
+.tip-card i {
+    font-size: 24px;
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.tip-card p {
+    color: #333;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* إنذار فترات الراحة */
+.break-alert {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.break-alert i {
+    font-size: 32px;
+    color: #ff9800;
+}
+
+.alert-text {
+    color: #856404;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.alert-details {
+    color: #666;
+    font-size: 14px;
+}
+
+/* مقاييس Risk/Reward */
+.metric-display {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.metric-label {
+    color: #666;
+    font-weight: bold;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.metric-value.positive {
+    color: #4CAF50;
+}
+
+.metric-value.negative {
+    color: #f44336;
+}
+
+.metric-rating {
+    margin: 15px 0;
+}
+
+.rating {
+    display: inline-block;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.rating.excellent {
+    background: #d4edda;
+    color: #155724;
+}
+
+.rating.good {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.rating.average {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.rating.poor {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.metric-tip {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 8px;
+    color: #1976d2;
+    font-weight: bold;
+    margin-top: 15px;
+}
+
+/* مؤشرات الأداء المتقدمة */
+.advanced-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.metric-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.metric-card:hover {
+    border-color: #667eea;
+    transform: translateY(-3px);
+}
+
+.metric-title {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.metric-desc {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.4;
+}
+
+/* آلة حساب حجم اللوت */
+.lot-calculator {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.calculator-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+
+.input-group label {
+    color: #666;
+    font-weight: bold;
+}
+
+.input-value {
+    color: #333;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.calculator-result {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    padding: 25px;
+    text-align: center;
+    color: white;
+    margin: 20px 0;
+}
+
+.result-label {
+    font-size: 14px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.result-value {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.calculator-tip {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    font-style: italic;
+}
+
 /* المودالات */
 .modal {
     display: none;
@@ -933,6 +1287,26 @@ body {
     .calendar-day {
         padding: 8px;
         min-height: 70px;
+    }
+    
+    .analysis-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .analysis-card {
+        padding: 20px;
+    }
+    
+    .advanced-metrics {
+        grid-template-columns: 1fr;
+    }
+    
+    .tips-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .calculator-inputs {
+        grid-template-columns: 1fr;
     }
 }
 
