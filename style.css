@@ -27,13 +27,6 @@
   transform: scale(0.97);
 }
 
-
-
-
-
-
-
-
 /* أنماط عامة */
 * {
     margin: 0;
@@ -418,6 +411,16 @@ body {
 
 .btn-danger:hover {
     background: #f44336;
+    color: white;
+}
+
+.btn-edit {
+    background: #fff8e1;
+    color: #ff9800;
+}
+
+.btn-edit:hover {
+    background: #ff9800;
     color: white;
 }
 
