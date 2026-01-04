@@ -56,6 +56,16 @@ let currentYear = new Date().getFullYear();
 // متغيرات الرسوم البيانية
 let chartInstances = {};
 
+// متغيرات التحليل المتقدم
+let advancedMetrics = {
+    lossPatterns: {},
+    riskRewardRatio: 0,
+    maxDrawdown: 0,
+    sharpeRatio: 0,
+    winLossRatio: 0,
+    optimalLotSize: 0
+};
+
 // ========== تهيئة التطبيق عند تحميل الصفحة ==========
 document.addEventListener('DOMContentLoaded', function() {
     console.log("🚀 Starting application...");
@@ -233,8 +243,7 @@ function setupEventListeners() {
     if (timePeriod) timePeriod.addEventListener('change', loadLeaderboard);
     if (minTrades) minTrades.addEventListener('change', loadLeaderboard);
     
-    // تعديل الصفقات - إضافة المستمعات الجديدة
-    // معاينة الصورة في نموذج التعديل
+    // تعديل الصفقات
     const editTradeImage = document.getElementById('editTradeImage');
     if (editTradeImage) {
         editTradeImage.addEventListener('change', function() {
@@ -269,6 +278,12 @@ function setupEventListeners() {
                 editOtherAssetInput.value = '';
             }
         });
+    }
+    
+    // زر التحليل الذكي
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', performAdvancedAnalysis);
     }
     
     console.log("✅ Event listeners setup complete");
@@ -712,6 +727,9 @@ async function loadUserData() {
             if (userTrades && userTrades.length > 0) {
                 updateCharts();
             }
+            
+            // إجراء التحليل المتقدم
+            performAdvancedAnalysis();
             
         } else {
             console.error("❌ User document not found in Firestore");
@@ -1437,6 +1455,10 @@ function switchTab(tabId) {
             setTimeout(() => {
                 updatePerformanceCharts();
             }, 100);
+        } else if (tabId === 'analysis') {
+            setTimeout(() => {
+                updateAnalysisContent();
+            }, 100);
         }
     }
 }
@@ -2094,6 +2116,9 @@ async function updateCapital() {
         // تحديث الواجهة
         updateUIAfterLogin();
         
+        // إعادة رسم الرسم البياني لرأس المال
+        updateCapitalChart();
+        
         showSuccess('تم تحديث رأس المال بنجاح!');
         
     } catch (error) {
@@ -2573,6 +2598,12 @@ function updateCapitalChart() {
         capitalDates.push(`صفقة ${index + 1}`);
     });
     
+    // تحديث برأس المال الحالي الفعلي
+    if (userData.currentCapital !== capital) {
+        capitalData.push(userData.currentCapital);
+        capitalDates.push('الحالي');
+    }
+    
     // تأكد من وجود بيانات
     if (capitalData.length <= 1) {
         canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
@@ -2580,7 +2611,7 @@ function updateCapitalChart() {
     }
     
     try {
-        new Chart(canvas, {
+        const chart = new Chart(canvas, {
             type: 'line',
             data: {
                 labels: capitalDates,
@@ -2619,6 +2650,9 @@ function updateCapitalChart() {
                         ticks: {
                             font: {
                                 family: 'Cairo, sans-serif'
+                            },
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
                             }
                         }
                     },
@@ -2632,6 +2666,9 @@ function updateCapitalChart() {
                 }
             }
         });
+        
+        // حفظ المثيل للتعديل لاحقاً
+        chartInstances['capitalChart'] = chart;
         console.log("✅ capitalChart updated");
     } catch (error) {
         console.error("❌ Error updating capitalChart:", error);
@@ -2847,6 +2884,446 @@ function updateMonthlySuccessChart() {
             }
         }
     });
+}
+
+// ========== التحليل المتقدم ==========
+function performAdvancedAnalysis() {
+    if (!userTrades || userTrades.length < 5) {
+        console.log("⚠️ Not enough trades for analysis");
+        return;
+    }
+    
+    console.log("🔍 Performing advanced analysis...");
+    
+    // 1. تحليل أنماط الخسارة
+    analyzeLossPatterns();
+    
+    // 2. حساب نسبة Risk/Reward
+    calculateRiskRewardRatio();
+    
+    // 3. حساب Max Drawdown
+    calculateMaxDrawdown();
+    
+    // 4. حساب مؤشرات الأداء المتقدمة
+    calculateAdvancedMetrics();
+    
+    // 5. حساب حجم اللوت الأمثل
+    calculateOptimalLotSize();
+    
+    // 6. عرض النتائج
+    updateAnalysisContent();
+}
+
+function analyzeLossPatterns() {
+    const losingTrades = userTrades.filter(trade => trade.result === 'خسارة');
+    
+    if (losingTrades.length === 0) {
+        advancedMetrics.lossPatterns = {
+            hasPatterns: false,
+            message: "لا توجد صفقات خاسرة للتحليل"
+        };
+        return;
+    }
+    
+    // تحليل حسب اليوم
+    const lossByDay = {};
+    const lossBySession = {};
+    const lossByAsset = {};
+    
+    losingTrades.forEach(trade => {
+        // حسب اليوم
+        if (trade.date) {
+            let tradeDate;
+            if (trade.date.toDate) {
+                tradeDate = trade.date.toDate();
+            } else {
+                tradeDate = new Date(trade.date);
+            }
+            const dayOfWeek = tradeDate.getDay();
+            lossByDay[dayOfWeek] = (lossByDay[dayOfWeek] || 0) + 1;
+        }
+        
+        // حسب الجلسة
+        if (trade.session) {
+            lossBySession[trade.session] = (lossBySession[trade.session] || 0) + 1;
+        }
+        
+        // حسب الأصل
+        if (trade.asset) {
+            lossByAsset[trade.asset] = (lossByAsset[trade.asset] || 0) + 1;
+        }
+    });
+    
+    // إيجاد الأنماط
+    const patterns = [];
+    const suggestions = [];
+    
+    // تحليل اليوم الأسوأ
+    const worstDay = Object.keys(lossByDay).reduce((a, b) => lossByDay[a] > lossByDay[b] ? a : b);
+    const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    patterns.push(`معظم خسائرك في يوم ${dayNames[worstDay]}`);
+    suggestions.push(`فكر في تقليل حجم التداول أو التوقف في يوم ${dayNames[worstDay]}`);
+    
+    // تحليل الجلسة الأسوأ
+    const worstSession = Object.keys(lossBySession).reduce((a, b) => lossBySession[a] > lossBySession[b] ? a : b, '');
+    if (worstSession) {
+        patterns.push(`معظم خسائرك في الجلسة ${worstSession}`);
+        suggestions.push(`راجع استراتيجيتك في الجلسة ${worstSession}`);
+    }
+    
+    // تحليل الأصل الأسوأ
+    const worstAsset = Object.keys(lossByAsset).reduce((a, b) => lossByAsset[a] > lossByAsset[b] ? a : b, '');
+    if (worstAsset) {
+        patterns.push(`معظم خسائرك على الأصل ${worstAsset}`);
+        suggestions.push(`فكر في تجنب تداول ${worstAsset} أو تحسين استراتيجيتك فيه`);
+    }
+    
+    advancedMetrics.lossPatterns = {
+        hasPatterns: patterns.length > 0,
+        patterns: patterns,
+        suggestions: suggestions,
+        losingTradesCount: losingTrades.length,
+        lossPercentage: (losingTrades.length / userTrades.length) * 100
+    };
+}
+
+function calculateRiskRewardRatio() {
+    const winningTrades = userTrades.filter(trade => trade.result === 'ربح');
+    const losingTrades = userTrades.filter(trade => trade.result === 'خسارة');
+    
+    if (winningTrades.length === 0 || losingTrades.length === 0) {
+        advancedMetrics.riskRewardRatio = 0;
+        return;
+    }
+    
+    const avgWin = winningTrades.reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0) / winningTrades.length;
+    const avgLoss = losingTrades.reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0) / losingTrades.length;
+    
+    advancedMetrics.riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : 0;
+}
+
+function calculateMaxDrawdown() {
+    let peak = userData.initialCapital;
+    let maxDrawdown = 0;
+    let currentCapital = userData.initialCapital;
+    
+    // ترتيب الصفقات حسب التاريخ
+    const sortedTrades = [...userTrades].sort((a, b) => {
+        const dateA = a.date ? (a.date.toDate ? a.date.toDate() : new Date(a.date)) : new Date(0);
+        const dateB = b.date ? (b.date.toDate ? b.date.toDate() : new Date(b.date)) : new Date(0);
+        return dateA - dateB;
+    });
+    
+    sortedTrades.forEach(trade => {
+        currentCapital += trade.profitLoss || 0;
+        
+        if (currentCapital > peak) {
+            peak = currentCapital;
+        }
+        
+        const drawdown = ((peak - currentCapital) / peak) * 100;
+        if (drawdown > maxDrawdown) {
+            maxDrawdown = drawdown;
+        }
+    });
+    
+    advancedMetrics.maxDrawdown = maxDrawdown;
+}
+
+function calculateAdvancedMetrics() {
+    const winningTrades = userTrades.filter(trade => trade.result === 'ربح');
+    const losingTrades = userTrades.filter(trade => trade.result === 'خسارة');
+    
+    // Sharpe Ratio (مبسط)
+    const avgReturn = (winningTrades.length - losingTrades.length) / userTrades.length;
+    const returns = userTrades.map(trade => trade.result === 'ربح' ? 1 : -1);
+    const stdDev = Math.sqrt(returns.map(r => Math.pow(r - avgReturn, 2)).reduce((a, b) => a + b, 0) / returns.length);
+    advancedMetrics.sharpeRatio = stdDev !== 0 ? avgReturn / stdDev : 0;
+    
+    // Win/Loss Ratio
+    advancedMetrics.winLossRatio = losingTrades.length > 0 ? winningTrades.length / losingTrades.length : winningTrades.length;
+    
+    // Profit Factor
+    const totalProfit = winningTrades.reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0);
+    const totalLoss = losingTrades.reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0);
+    advancedMetrics.profitFactor = totalLoss > 0 ? totalProfit / totalLoss : totalProfit;
+}
+
+function calculateOptimalLotSize() {
+    // قاعدة 1%: لا تخاطر بأكثر من 1% من رأس المال في صفقة واحدة
+    const riskPerTrade = userData.currentCapital * 0.01;
+    
+    // افتراض أن متوسط وقف الخسارة هو 20 نقطة
+    const avgStopLoss = 20;
+    
+    // حساب حجم اللوت الأمثل (افتراض أن كل نقطة تساوي 10$ للوت القياسي)
+    const optimalLot = riskPerTrade / (avgStopLoss * 10);
+    
+    advancedMetrics.optimalLotSize = Math.max(0.01, Math.min(optimalLot, 10)); // بين 0.01 و 10 لوت
+    
+    // حساب نسبة المخاطرة الموصى بها
+    const recommendedRisk = Math.min(2, Math.max(0.5, advancedMetrics.riskRewardRatio));
+    advancedMetrics.recommendedRisk = recommendedRisk;
+}
+
+function updateAnalysisContent() {
+    const analysisContent = document.getElementById('analysisContent');
+    if (!analysisContent) return;
+    
+    if (!userTrades || userTrades.length < 5) {
+        analysisContent.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-chart-line"></i>
+                <p>يحتاج التحليل إلى 5 صفقات على الأقل</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    // 1. تحليل أنماط الخسارة
+    if (advancedMetrics.lossPatterns && advancedMetrics.lossPatterns.hasPatterns) {
+        html += `
+            <div class="analysis-card">
+                <h3><i class="fas fa-chart-line-down"></i> تحليل أنماط الخسارة</h3>
+                <div class="analysis-details">
+                    <div class="analysis-item">
+                        <span class="label">عدد الصفقات الخاسرة:</span>
+                        <span class="value">${advancedMetrics.lossPatterns.losingTradesCount}</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="label">نسبة الخسائر:</span>
+                        <span class="value">${advancedMetrics.lossPatterns.lossPercentage.toFixed(1)}%</span>
+                    </div>
+                    <div class="analysis-patterns">
+                        <h4>الأنماط المكتشفة:</h4>
+                        <ul>
+                            ${advancedMetrics.lossPatterns.patterns.map(pattern => `<li>${pattern}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="analysis-suggestions">
+                        <h4>اقتراحات للتحسين:</h4>
+                        <ul>
+                            ${advancedMetrics.lossPatterns.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 2. نصائح لتحسين نسبة الفوز
+    const stats = calculateStats(userTrades);
+    const winRateTips = getWinRateImprovementTips(stats);
+    html += `
+        <div class="analysis-card">
+            <h3><i class="fas fa-lightbulb"></i> نصائح لتحسين نسبة الفوز</h3>
+            <div class="tips-grid">
+                ${winRateTips.map(tip => `
+                    <div class="tip-card">
+                        <i class="fas fa-bullseye"></i>
+                        <p>${tip}</p>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    // 3. اقتراح فترات راحة
+    const breakSuggestion = getBreakSuggestion();
+    if (breakSuggestion.needsBreak) {
+        html += `
+            <div class="analysis-card warning">
+                <h3><i class="fas fa-exclamation-triangle"></i> اقتراح فترات راحة</h3>
+                <div class="break-alert">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <p class="alert-text">${breakSuggestion.message}</p>
+                        <p class="alert-details">${breakSuggestion.details}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 4. نسبة Risk/Reward
+    html += `
+        <div class="analysis-card">
+            <h3><i class="fas fa-balance-scale"></i> نسبة Risk/Reward</h3>
+            <div class="metric-display">
+                <div class="metric-item">
+                    <span class="metric-label">النسبة الحالية:</span>
+                    <span class="metric-value ${advancedMetrics.riskRewardRatio >= 1.5 ? 'positive' : 'negative'}">
+                        ${advancedMetrics.riskRewardRatio.toFixed(2)}
+                    </span>
+                </div>
+                <div class="metric-rating">
+                    ${getRiskRewardRating(advancedMetrics.riskRewardRatio)}
+                </div>
+                <p class="metric-tip">
+                    ${getRiskRewardTip(advancedMetrics.riskRewardRatio)}
+                </p>
+            </div>
+        </div>
+    `;
+    
+    // 5. Max Drawdown
+    html += `
+        <div class="analysis-card">
+            <h3><i class="fas fa-chart-line"></i> أقصى خسارة متتالية</h3>
+            <div class="metric-display">
+                <div class="metric-item">
+                    <span class="metric-label">Max Drawdown:</span>
+                    <span class="metric-value ${advancedMetrics.maxDrawdown < 20 ? 'positive' : 'negative'}">
+                        ${advancedMetrics.maxDrawdown.toFixed(1)}%
+                    </span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${Math.min(advancedMetrics.maxDrawdown, 100)}%"></div>
+                </div>
+                <p class="metric-tip">
+                    ${advancedMetrics.maxDrawdown < 20 ? 
+                        'ممتاز! إدارة المخاطر جيدة' : 
+                        'مرتفع! تحتاج لتحسين إدارة المخاطر'}
+                </p>
+            </div>
+        </div>
+    `;
+    
+    // 6. مؤشرات أداء متقدمة
+    html += `
+        <div class="analysis-card">
+            <h3><i class="fas fa-chart-bar"></i> مؤشرات الأداء المتقدمة</h3>
+            <div class="advanced-metrics">
+                <div class="metric-card">
+                    <div class="metric-title">Sharpe Ratio</div>
+                    <div class="metric-value ${advancedMetrics.sharpeRatio > 0 ? 'positive' : 'negative'}">
+                        ${advancedMetrics.sharpeRatio.toFixed(2)}
+                    </div>
+                    <div class="metric-desc">مقياس العائد المعدل بالمخاطرة</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Win/Loss Ratio</div>
+                    <div class="metric-value ${advancedMetrics.winLossRatio > 1 ? 'positive' : 'negative'}">
+                        ${advancedMetrics.winLossRatio.toFixed(2)}
+                    </div>
+                    <div class="metric-desc">نسبة الصفقات الرابحة للخاسرة</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Profit Factor</div>
+                    <div class="metric-value ${advancedMetrics.profitFactor > 1.5 ? 'positive' : 'negative'}">
+                        ${advancedMetrics.profitFactor.toFixed(2)}
+                    </div>
+                    <div class="metric-desc">نسبة إجمالي الربح للخسارة</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 7. حجم اللوت الأمثل
+    html += `
+        <div class="analysis-card">
+            <h3><i class="fas fa-calculator"></i> حجم اللوت الأمثل</h3>
+            <div class="lot-calculator">
+                <div class="calculator-inputs">
+                    <div class="input-group">
+                        <label>رأس المال الحالي:</label>
+                        <div class="input-value">$${userData.currentCapital.toFixed(2)}</div>
+                    </div>
+                    <div class="input-group">
+                        <label>نسبة المخاطرة الموصى بها:</label>
+                        <div class="input-value">${advancedMetrics.recommendedRisk ? advancedMetrics.recommendedRisk.toFixed(1) + '%' : '1%'}</div>
+                    </div>
+                </div>
+                <div class="calculator-result">
+                    <div class="result-label">حجم اللوت الأمثل:</div>
+                    <div class="result-value">${advancedMetrics.optimalLotSize.toFixed(2)} لوت</div>
+                </div>
+                <p class="calculator-tip">
+                    بناءً على قاعدة المخاطرة بنسبة 1% من رأس المال
+                </p>
+            </div>
+        </div>
+    `;
+    
+    analysisContent.innerHTML = html;
+}
+
+function getWinRateImprovementTips(stats) {
+    const tips = [];
+    
+    if (stats.successRate < 40) {
+        tips.push('راجع استراتيجية الدخول والخروج');
+        tips.push('استخدم أوامر وقف الخسارة في كل صفقة');
+        tips.push('تدرب على حساب تجريبي قبل التداول الحقيقي');
+        tips.push('ركز على أصل واحد أو اثنين فقط');
+    } else if (stats.successRate < 60) {
+        tips.push('حسن من نسبة العائد إلى المخاطرة');
+        tips.push('استخدم التحليل الفني لتحديد نقاط الدخول');
+        tips.push('احتفظ بمذكرة تداول لتحليل الأخطاء');
+        tips.push('خذ استراحة بعد صفقتين خاسرتين متتاليتين');
+    } else {
+        tips.push('استمر في استراتيجيتك الحالية');
+        tips.push('زود حجم الصفقات تدريجياً');
+        tips.push('نوع بين الأصول المختلفة');
+        tips.push('استخدم جني الأرباح الجزئي');
+    }
+    
+    return tips;
+}
+
+function getBreakSuggestion() {
+    // تحقق من سلسلة الخسائر الأخيرة
+    const recentTrades = userTrades.slice(0, 5);
+    const recentLosses = recentTrades.filter(trade => trade.result === 'خسارة').length;
+    
+    if (recentLosses >= 3) {
+        return {
+            needsBreak: true,
+            message: 'أنت في سلسلة خسائر!',
+            details: `لديك ${recentLosses} خسائر في آخر 5 صفقات. ننصحك بأخذ استراحة لمدة 24 ساعة`
+        };
+    }
+    
+    // تحقق من كثرة التداول
+    if (userTrades.length > 20) {
+        const today = new Date();
+        const tradesToday = userTrades.filter(trade => {
+            if (!trade.date) return false;
+            let tradeDate;
+            if (trade.date.toDate) {
+                tradeDate = trade.date.toDate();
+            } else {
+                tradeDate = new Date(trade.date);
+            }
+            return tradeDate.toDateString() === today.toDateString();
+        }).length;
+        
+        if (tradesToday > 10) {
+            return {
+                needsBreak: true,
+                message: 'كثرة التداول اليوم!',
+                details: `قمت بـ ${tradesToday} صفقة اليوم. ننصحك بالتوقف لاستعادة التركيز`
+            };
+        }
+    }
+    
+    return { needsBreak: false };
+}
+
+function getRiskRewardRating(ratio) {
+    if (ratio >= 2) return '<span class="rating excellent">ممتاز (2:1+)</span>';
+    if (ratio >= 1.5) return '<span class="rating good">جيد (1.5:1)</span>';
+    if (ratio >= 1) return '<span class="rating average">مقبول (1:1)</span>';
+    return '<span class="rating poor">ضعيف (أقل من 1:1)</span>';
+}
+
+function getRiskRewardTip(ratio) {
+    if (ratio >= 2) return 'نسبة ممتازة! استمر في استراتيجيتك الحالية';
+    if (ratio >= 1.5) return 'نسبة جيدة، يمكنك تحسينها بالمزيد من الصبر في جني الأرباح';
+    if (ratio >= 1) return 'النسبة مقبولة، حاول زيادة أرباحك أو تقليل خسائرك';
+    return 'تحذير! أرباحك أقل من خسائرك، راجع استراتيجيتك فوراً';
 }
 
 // ========== دوال التحكم في التقويم ==========
