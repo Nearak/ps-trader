@@ -45,6 +45,10 @@ let userStrategy = null;
 let sessionRefreshInterval = null;
 let allTradersData = [];
 
+// متغيرات التعديل
+let editingTradeId = null;
+let originalTradeData = null;
+
 // متغيرات التقويم
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
@@ -229,6 +233,44 @@ function setupEventListeners() {
     if (timePeriod) timePeriod.addEventListener('change', loadLeaderboard);
     if (minTrades) minTrades.addEventListener('change', loadLeaderboard);
     
+    // تعديل الصفقات - إضافة المستمعات الجديدة
+    // معاينة الصورة في نموذج التعديل
+    const editTradeImage = document.getElementById('editTradeImage');
+    if (editTradeImage) {
+        editTradeImage.addEventListener('change', function() {
+            previewEditImage();
+        });
+    }
+    
+    // إزالة الصورة في نموذج التعديل
+    const editRemoveImageBtn = document.getElementById('editRemoveImageBtn');
+    if (editRemoveImageBtn) {
+        editRemoveImageBtn.addEventListener('click', function() {
+            removeEditImagePreview();
+        });
+    }
+    
+    // حفظ تعديلات الصفقة
+    const editTradeForm = document.getElementById('editTradeForm');
+    if (editTradeForm) {
+        editTradeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            updateTrade();
+        });
+    }
+    
+    // إدارة اختيار الأصل الآخر في نموذج التعديل
+    const editAssetSelect = document.getElementById('editAsset');
+    const editOtherAssetInput = document.getElementById('editOtherAsset');
+    if (editAssetSelect && editOtherAssetInput) {
+        editAssetSelect.addEventListener('change', function() {
+            editOtherAssetInput.style.display = this.value === 'other' ? 'block' : 'none';
+            if (this.value !== 'other') {
+                editOtherAssetInput.value = '';
+            }
+        });
+    }
+    
     console.log("✅ Event listeners setup complete");
 }
 
@@ -340,6 +382,8 @@ function resetAppState() {
     userTrades = [];
     userStrategy = null;
     allTradersData = [];
+    editingTradeId = null;
+    originalTradeData = null;
     
     // تنظيف الرسوم البيانية
     cleanupCharts();
@@ -768,6 +812,247 @@ async function loadUserStrategy() {
         }
     } catch (error) {
         console.error("❌ Error loading strategy:", error);
+    }
+}
+
+// ========== دوال تعديل الصفقات ==========
+window.editTrade = async function(tradeId) {
+    if (!currentUser) return;
+    
+    try {
+        console.log("✏️ Editing trade:", tradeId);
+        
+        // جلب بيانات الصفقة من Firestore
+        const tradeDoc = await db.collection('trades').doc(tradeId).get();
+        
+        if (!tradeDoc.exists) {
+            showError('الصفقة غير موجودة');
+            return;
+        }
+        
+        const trade = tradeDoc.data();
+        editingTradeId = tradeId;
+        originalTradeData = trade;
+        
+        // تعبئة النموذج ببيانات الصفقة
+        document.getElementById('editTradeId').value = tradeId;
+        document.getElementById('editOriginalProfitLoss').value = trade.profitLoss || 0;
+        
+        // الأصل
+        const assetSelect = document.getElementById('editAsset');
+        const otherAssetInput = document.getElementById('editOtherAsset');
+        const commonAssets = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'XAU/USD', 'BTC/USD', 'ETH/USD'];
+        
+        if (commonAssets.includes(trade.asset)) {
+            assetSelect.value = trade.asset;
+            otherAssetInput.style.display = 'none';
+        } else {
+            assetSelect.value = 'other';
+            otherAssetInput.style.display = 'block';
+            otherAssetInput.value = trade.asset;
+        }
+        
+        document.getElementById('editTradeType').value = trade.tradeType;
+        document.getElementById('editAmount').value = trade.amount;
+        document.getElementById('editResult').value = trade.result;
+        document.getElementById('editProfitLoss').value = trade.profitLoss;
+        document.getElementById('editSession').value = trade.session;
+        document.getElementById('editNotes').value = trade.notes || '';
+        
+        // التاريخ
+        let tradeDate;
+        if (trade.date && trade.date.toDate) {
+            tradeDate = trade.date.toDate();
+        } else if (trade.date) {
+            tradeDate = new Date(trade.date);
+        } else {
+            tradeDate = new Date();
+        }
+        
+        const year = tradeDate.getFullYear();
+        const month = String(tradeDate.getMonth() + 1).padStart(2, '0');
+        const day = String(tradeDate.getDate()).padStart(2, '0');
+        const hours = String(tradeDate.getHours()).padStart(2, '0');
+        const minutes = String(tradeDate.getMinutes()).padStart(2, '0');
+        
+        document.getElementById('editTradeDate').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        // الصورة
+        const preview = document.getElementById('editImagePreview');
+        const removeBtn = document.getElementById('editRemoveImageBtn');
+        
+        if (trade.imageUrl) {
+            preview.src = trade.imageUrl;
+            preview.style.display = 'block';
+            removeBtn.style.display = 'inline-block';
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+            removeBtn.style.display = 'none';
+        }
+        
+        // إظهار الـ modal
+        document.getElementById('editTradeModal').style.display = 'block';
+        
+    } catch (error) {
+        console.error("❌ Error loading trade for edit:", error);
+        showError('حدث خطأ أثناء تحميل بيانات الصفقة');
+    }
+};
+
+async function updateTrade() {
+    const tradeId = document.getElementById('editTradeId').value;
+    const originalProfitLoss = parseFloat(document.getElementById('editOriginalProfitLoss').value) || 0;
+    
+    if (!tradeId || !currentUser || !userData) {
+        showError('بيانات غير صحيحة');
+        return;
+    }
+    
+    const asset = document.getElementById('editAsset').value;
+    const otherAsset = document.getElementById('editOtherAsset').value;
+    const selectedAsset = asset === 'other' ? otherAsset : asset;
+    
+    const tradeType = document.getElementById('editTradeType').value;
+    const amount = parseFloat(document.getElementById('editAmount').value);
+    const result = document.getElementById('editResult').value;
+    const profitLoss = parseFloat(document.getElementById('editProfitLoss').value);
+    const session = document.getElementById('editSession').value;
+    const notes = document.getElementById('editNotes').value;
+    const tradeDate = document.getElementById('editTradeDate').value;
+    const imageFile = document.getElementById('editTradeImage').files[0];
+    
+    // التحقق من الحقول المطلوبة
+    if (!selectedAsset || !tradeType || !amount || !result || isNaN(profitLoss) || !session || !tradeDate) {
+        showError('يرجى ملء جميع الحقول المطلوبة');
+        return;
+    }
+    
+    if (amount <= 0) {
+        showError('المبلغ يجب أن يكون أكبر من الصفر');
+        return;
+    }
+    
+    if (asset === 'other' && !otherAsset) {
+        showError('يرجى إدخال اسم الأصل');
+        return;
+    }
+    
+    try {
+        console.log("🔄 Updating trade:", tradeId);
+        
+        // رفع الصورة إذا كانت موجودة
+        let imageUrl = originalTradeData.imageUrl || '';
+        if (imageFile) {
+            const storageRef = storage.ref(`trades/${currentUser.uid}/${Date.now()}_${imageFile.name}`);
+            const snapshot = await storageRef.put(imageFile);
+            imageUrl = await snapshot.ref.getDownloadURL();
+            console.log("✅ New image uploaded:", imageUrl);
+        }
+        
+        // حساب الفرق في الربح/الخسارة
+        const profitLossDiff = profitLoss - originalProfitLoss;
+        
+        // تحديث بيانات الصفقة
+        const updatedTradeData = {
+            asset: selectedAsset,
+            tradeType: tradeType,
+            amount: amount,
+            result: result,
+            profitLoss: profitLoss,
+            session: session,
+            notes: notes,
+            imageUrl: imageUrl,
+            date: firebase.firestore.Timestamp.fromDate(new Date(tradeDate)),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection('trades').doc(tradeId).update(updatedTradeData);
+        console.log("✅ Trade updated:", tradeId);
+        
+        // تحديث رأس المال
+        const newCapital = userData.currentCapital + profitLossDiff;
+        
+        // تحديث إحصائيات المستخدم
+        let updateData = {
+            currentCapital: newCapital,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // تحديث إجمالي الأرباح والخسائر
+        if (originalTradeData.result === 'ربح' && result === 'ربح') {
+            updateData.totalProfit = (userData.totalProfit || 0) + profitLossDiff;
+        } else if (originalTradeData.result === 'ربح' && result === 'خسارة') {
+            updateData.totalProfit = (userData.totalProfit || 0) - originalProfitLoss;
+            updateData.totalLoss = (userData.totalLoss || 0) + Math.abs(profitLoss);
+        } else if (originalTradeData.result === 'خسارة' && result === 'ربح') {
+            updateData.totalLoss = (userData.totalLoss || 0) - Math.abs(originalProfitLoss);
+            updateData.totalProfit = (userData.totalProfit || 0) + profitLoss;
+        } else if (originalTradeData.result === 'خسارة' && result === 'خسارة') {
+            updateData.totalLoss = (userData.totalLoss || 0) + (Math.abs(profitLoss) - Math.abs(originalProfitLoss));
+        }
+        
+        await db.collection('users').doc(currentUser.uid).update(updateData);
+        console.log("✅ User data updated");
+        
+        // إغلاق الـ modal
+        document.getElementById('editTradeModal').style.display = 'none';
+        
+        // إعادة تعيين النموذج
+        document.getElementById('editTradeForm').reset();
+        document.getElementById('editImagePreview').style.display = 'none';
+        document.getElementById('editRemoveImageBtn').style.display = 'none';
+        
+        // إظهار رسالة النجاح
+        showSuccess('تم تحديث الصفقة بنجاح!');
+        
+        // إعادة تحميل البيانات
+        await loadUserData();
+        
+    } catch (error) {
+        console.error("❌ Error updating trade:", error);
+        showError('حدث خطأ أثناء تحديث الصفقة: ' + error.message);
+    }
+}
+
+// ========== دوال معاينة الصور للنموذج ==========
+function previewEditImage() {
+    const imageFile = document.getElementById('editTradeImage').files[0];
+    const preview = document.getElementById('editImagePreview');
+    const removeBtn = document.getElementById('editRemoveImageBtn');
+    
+    if (imageFile && preview) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            
+            if (removeBtn) {
+                removeBtn.style.display = 'inline-block';
+            }
+        }
+        
+        reader.readAsDataURL(imageFile);
+    }
+}
+
+function removeEditImagePreview() {
+    const preview = document.getElementById('editImagePreview');
+    const removeBtn = document.getElementById('editRemoveImageBtn');
+    const imageInput = document.getElementById('editTradeImage');
+    
+    if (preview) {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+    
+    if (removeBtn) {
+        removeBtn.style.display = 'none';
+    }
+    
+    if (imageInput) {
+        imageInput.value = '';
     }
 }
 
@@ -1249,6 +1534,32 @@ window.deleteTrade = async function(tradeId) {
     }
     
     try {
+        // جلب بيانات الصفقة لحساب رأس المال
+        const tradeDoc = await db.collection('trades').doc(tradeId).get();
+        if (tradeDoc.exists) {
+            const trade = tradeDoc.data();
+            const profitLoss = parseFloat(trade.profitLoss) || 0;
+            
+            // إعادة ضبط رأس المال
+            const newCapital = userData.currentCapital - profitLoss;
+            
+            // تحديث إحصائيات المستخدم
+            let updateData = {
+                currentCapital: newCapital,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            if (trade.result === 'ربح') {
+                updateData.totalProfit = (userData.totalProfit || 0) - profitLoss;
+            } else if (trade.result === 'خسارة') {
+                updateData.totalLoss = (userData.totalLoss || 0) - Math.abs(profitLoss);
+            }
+            
+            updateData.totalTrades = (userData.totalTrades || 0) - 1;
+            
+            await db.collection('users').doc(currentUser.uid).update(updateData);
+        }
+        
         await db.collection('trades').doc(tradeId).delete();
         showSuccess('تم حذف الصفقة بنجاح!');
         
@@ -1591,6 +1902,9 @@ function updateTradesList() {
                         <span style="font-size: 0.8em; color: #666; margin-right: 10px;">${dateStr}</span>
                     </div>
                     <div class="transaction-actions">
+                        <button class="btn-icon btn-edit" onclick="editTrade('${trade.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         ${trade.imageUrl ? 
                             `<button class="btn-icon" onclick="showImageModal('${trade.imageUrl}')">
                                 <i class="fas fa-image"></i>
