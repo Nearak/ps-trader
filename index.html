@@ -131,6 +131,9 @@
             <button class="tab" data-tab="strategy">
                 <i class="fas fa-chess-board"></i> الاستراتيجية
             </button>
+            <button class="tab" data-tab="analysis">
+                <i class="fas fa-brain"></i> التحليل الذكي
+            </button>
         </div>
 
         <!-- محتوى التبويبات -->
@@ -581,6 +584,31 @@
                         <div id="strategyPreview" class="preview-content">
                             <!-- سيتم ملؤها بواسطة JavaScript -->
                             <p class="no-data">لم تقم بكتابة استراتيجية بعد</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تبويب التحليل الذكي -->
+            <div id="analysis-tab" class="tab-content">
+                <h2 class="section-title"><i class="fas fa-brain"></i> التحليل الذكي</h2>
+                
+                <div class="card">
+                    <div class="analysis-header">
+                        <div class="analysis-intro">
+                            <h3><i class="fas fa-robot"></i> نظام التحليل الذكي المتقدم</h3>
+                            <p>يقوم النظام بتحليل تداولاتك تلقائياً ويقدم لك توصيات مبنية على البيانات لتحسين أدائك</p>
+                        </div>
+                        <button id="analyzeBtn" class="btn-primary">
+                            <i class="fas fa-sync-alt"></i> تحديث التحليل
+                        </button>
+                    </div>
+                    
+                    <div id="analysisContent" class="analysis-content">
+                        <!-- سيتم ملؤها بواسطة JavaScript -->
+                        <div class="no-data">
+                            <i class="fas fa-chart-line"></i>
+                            <p>يحتاج التحليل إلى بيانات كافية. قم بإضافة 5 صفقات على الأقل.</p>
                         </div>
                     </div>
                 </div>
