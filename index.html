@@ -22,8 +22,8 @@
             <i class="fas fa-chart-line"></i>
             <span>نظام تتبع الصفقات</span>
             <a href="https://t.me/MOHAMMED_AK0" class="safe-link-btn">
-  المطور
-</a>
+                المطور
+            </a>
         </div>
         <div class="nav-user" id="userInfo" style="display: none;">
             <span id="userGreeting">مرحباً، محمد</span>
@@ -620,6 +620,112 @@
             <button id="saveCapitalBtn" class="btn-primary">
                 <i class="fas fa-save"></i> حفظ التغييرات
             </button>
+        </div>
+    </div>
+
+    <!-- تعديل الصفقة -->
+    <div id="editTradeModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3><i class="fas fa-edit"></i> تعديل الصفقة</h3>
+            
+            <form id="editTradeForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editAsset"><i class="fas fa-coins"></i> الأصل</label>
+                        <select id="editAsset" required>
+                            <option value="">اختر الأصل</option>
+                            <option value="EUR/USD">EUR/USD</option>
+                            <option value="GBP/USD">GBP/USD</option>
+                            <option value="USD/JPY">USD/JPY</option>
+                            <option value="XAU/USD">XAU/USD (الذهب)</option>
+                            <option value="BTC/USD">BTC/USD (بتكوين)</option>
+                            <option value="ETH/USD">ETH/USD (إيثيريوم)</option>
+                            <option value="other">أخرى</option>
+                        </select>
+                        <input type="text" id="editOtherAsset" placeholder="أدخل اسم الأصل" style="display: none; margin-top: 8px;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editTradeType"><i class="fas fa-exchange-alt"></i> نوع الصفقة</label>
+                        <select id="editTradeType" required>
+                            <option value="">اختر النوع</option>
+                            <option value="شراء">شراء (Buy)</option>
+                            <option value="بيع">بيع (Sell)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editSession"><i class="fas fa-clock"></i> الجلسة</label>
+                        <select id="editSession" required>
+                            <option value="">اختر الجلسة</option>
+                            <option value="أسيوية">أسيوية</option>
+                            <option value="أوروبية">أوروبية</option>
+                            <option value="أمريكية">أمريكية</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editAmount"><i class="fas fa-money-bill-wave"></i> لوت ($)</label>
+                        <input type="number" id="editAmount" min="0.01" step="0.01" required placeholder="أدخل لوت">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editResult"><i class="fas fa-poll"></i> النتيجة</label>
+                        <select id="editResult" required>
+                            <option value="">اختر النتيجة</option>
+                            <option value="ربح">ربح</option>
+                            <option value="خسارة">خسارة</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editProfitLoss"><i class="fas fa-chart-line"></i> الربح/الخسارة ($)</label>
+                        <input type="number" id="editProfitLoss" step="0.01" required placeholder="أدخل المبلغ">
+                        <small style="color: #666;">استخدم قيمة سالبة للخسارة</small>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="editTradeDate"><i class="fas fa-calendar"></i> تاريخ ووقت الصفقة</label>
+                        <input type="datetime-local" id="editTradeDate" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="editNotes"><i class="fas fa-sticky-note"></i> ملاحظات (اختياري)</label>
+                        <textarea id="editNotes" rows="3" placeholder="أدخل ملاحظاتك عن الصفقة..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="editTradeImage"><i class="fas fa-image"></i> صفقة الصفقة (اختياري)</label>
+                        <input type="file" id="editTradeImage" accept="image/*">
+                        <div class="image-preview-container">
+                            <img id="editImagePreview" src="" alt="معاينة الصورة" style="display: none; max-width: 200px; margin-top: 10px; border-radius: 5px;">
+                            <button type="button" id="editRemoveImageBtn" class="btn-icon" style="display: none; margin-top: 10px;">
+                                <i class="fas fa-trash"></i> إزالة الصورة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="editTradeId">
+                <input type="hidden" id="editOriginalProfitLoss">
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-save"></i> حفظ التعديلات
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
