@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSTrader - لوحة تحكم المشرف</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <link rel="icon" type="image/png" href="https://icons.veryicon.com/png/o/business/bitcoin-icon/trade-1.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: #0f172a;
+            min-height: 100vh;
+            direction: rtl;
+            color: #e2e8f0;
+        }
+
+        /* Auth Screen */
+        .auth-overlay {
+            position: fixed;
+            inset: 0;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .auth-box {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 40px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .auth-box h2 {
+            text-align: center;
+            margin-bottom: 8px;
+            color: #818cf8;
+            font-size: 24px;
+        }
+
+        .auth-box p {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .auth-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 15px;
+            margin-bottom: 14px;
+            font-family: 'Cairo', sans-serif;
+            transition: border-color 0.3s;
+        }
+
+        .auth-box input:focus {
+            outline: none;
+            border-color: #818cf8;
+        }
+
+        .auth-box button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .auth-box button:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        .auth-error {
+            color: #f87171;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 14px;
+            display: none;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #334155;
+            border-top-color: #818cf8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-overlay p {
+            margin-top: 16px;
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: #1e293b;
+            padding: 16px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #818cf8;
+        }
+
+        .nav-brand i {
+            font-size: 24px;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            opacity: 0.9;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #94a3b8;
+            border: 1px solid #334155;
+        }
+
+        .btn-outline:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: #059669;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #047857;
+        }
+
+        /* Main Layout */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #334155;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-card .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .stat-card .stat-icon.blue { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+        .stat-card .stat-icon.green { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .stat-card .stat-icon.red { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .stat-card .stat-icon.yellow { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .stat-card .stat-icon.purple { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: #f1f5f9;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .stat-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        /* Sections */
+        .section {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-header h3 {
+            font-size: 18px;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-header h3 i {
+            color: #818cf8;
+        }
+
+        .section-body {
+            padding: 20px 24px;
+        }
+
+        /* Search & Filters */
+        .filters-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 8px 14px;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-family: 'Cairo', sans-serif;
+            min-width: 220px;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #818cf8;
+        }
+
+        .filter-select {
+            padding: 8px 14px;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #818cf8;
+        }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th {
+            background: #0f172a;
+            padding: 12px 16px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        table th:hover {
+            color: #818cf8;
+        }
+
+        table th.sorted {
+            color: #818cf8;
+        }
+
+        table th .sort-icon {
+            margin-right: 4px;
+            font-size: 11px;
+        }
+
+        table td {
+            padding: 12px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #1e293b;
+            white-space: nowrap;
+        }
+
+        table tbody tr {
+            transition: background 0.2s;
+        }
+
+        table tbody tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .user-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-profit { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge-loss { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .badge-neutral { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+
+        .clickable-row {
+            cursor: pointer;
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-container {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #334155;
+        }
+
+        .chart-container h4 {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .chart-container canvas {
+            max-height: 300px;
+        }
+
+        /* User Detail Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            z-index: 5000;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #1e293b;
+            border-radius: 16px;
+            width: 900px;
+            max-width: 100%;
+            border: 1px solid #334155;
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            color: #f1f5f9;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #f87171;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .user-detail-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .detail-stat {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        .detail-stat .val {
+            font-size: 22px;
+            font-weight: 800;
+            color: #f1f5f9;
+        }
+
+        .detail-stat .lbl {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .user-trades-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .user-trades-list table td {
+            border-bottom-color: #334155;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 12px 16px;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .main-content {
+                padding: 16px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filters-bar {
+                width: 100%;
+            }
+
+            .search-input, .filter-select {
+                width: 100%;
+                min-width: unset;
+            }
+
+            table th, table td {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            .modal {
+                margin: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card .stat-value {
+                font-size: 22px;
+            }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #334155;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+        }
+
+        /* Tab nav */
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            padding: 8px;
+            background: #0f172a;
+            border-radius: 10px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-btn:hover {
+            color: #94a3b8;
+            background: #1e293b;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Profit/Loss coloring */
+        .text-profit { color: #34d399; }
+        .text-loss { color: #f87171; }
+        .text-muted { color: #64748b; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Auth Overlay -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-box">
+            <h2><i class="fas fa-shield-alt"></i> لوحة المشرف</h2>
+            <p>أدخل بيانات حساب المشرف للوصول</p>
+            <input type="email" id="adminEmail" placeholder="البريد الإلكتروني" autocomplete="email">
+            <input type="password" id="adminPassword" placeholder="كلمة المرور" autocomplete="current-password">
+            <button id="adminLoginBtn" onclick="adminLogin()">
+                <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+            </button>
+            <p class="auth-error" id="authError"></p>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>جاري تحميل البيانات...</p>
+    </div>
+
+    <!-- Main App (hidden until auth) -->
+    <div id="appMain" class="hidden">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-shield-alt"></i>
+                <span>لوحة تحكم المشرف</span>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html" class="btn btn-outline">
+                    <i class="fas fa-home"></i> الصفحة الرئيسية
+                </a>
+                <button class="btn btn-outline" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> تحديث
+                </button>
+                <button class="btn btn-outline" onclick="exportCSV()">
+                    <i class="fas fa-file-csv"></i> تصدير CSV
+                </button>
+                <button class="btn btn-danger" onclick="adminLogout()">
+                    <i class="fas fa-sign-out-alt"></i> خروج
+                </button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <!-- Stats Overview -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-label">إجمالي المستخدمين</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-exchange-alt"></i></div>
+                    <div class="stat-value" id="totalTrades">0</div>
+                    <div class="stat-label">إجمالي الصفقات</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-arrow-up"></i></div>
+                    <div class="stat-value" id="totalProfits">$0</div>
+                    <div class="stat-label">إجمالي الأرباح</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red"><i class="fas fa-arrow-down"></i></div>
+                    <div class="stat-value" id="totalLosses">$0</div>
+                    <div class="stat-label">إجمالي الخسائر</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon yellow"><i class="fas fa-percentage"></i></div>
+                    <div class="stat-value" id="avgWinRate">0%</div>
+                    <div class="stat-label">متوسط نسبة الفوز</div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('users')">
+                    <i class="fas fa-users"></i> المستخدمين
+                </button>
+                <button class="tab-btn" onclick="switchTab('trades')">
+                    <i class="fas fa-list"></i> جميع الصفقات
+                </button>
+                <button class="tab-btn" onclick="switchTab('charts')">
+                    <i class="fas fa-chart-bar"></i> الرسوم البيانية
+                </button>
+            </div>
+
+            <!-- Users Tab -->
+            <div class="tab-content active" id="tab-users">
+                <div class="section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-users"></i> جدول المستخدمين</h3>
+                        <div class="filters-bar">
+                            <input type="text" class="search-input" id="userSearch" placeholder="بحث بالاسم أو البريد..." oninput="filterUsers()">
+                            <select class="filter-select" id="userSort" onchange="filterUsers()">
+                                <option value="name">ترتيب: الاسم</option>
+                                <option value="trades">ترتيب: عدد الصفقات</option>
+                                <option value="profit">ترتيب: الأرباح</option>
+                                <option value="winrate">ترتيب: نسبة الفوز</option>
+                                <option value="capital">ترتيب: رأس المال</option>
+                                <option value="recent">ترتيب: الأحدث</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>المستخدم</th>
+                                        <th>البريد الإلكتروني</th>
+                                        <th>رأس المال الحالي</th>
+                                        <th>عدد الصفقات</th>
+                                        <th>الأرباح</th>
+                                        <th>الخسائر</th>
+                                        <th>صافي الربح</th>
+                                        <th>نسبة الفوز</th>
+                                        <th>تاريخ التسجيل</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="empty-state hidden" id="usersEmpty">
+                            <i class="fas fa-users-slash"></i>
+                            <p>لا يوجد مستخدمين</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trades Tab -->
+            <div class="tab-content" id="tab-trades">
+                <div class="section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-list"></i> جميع الصفقات</h3>
+                        <div class="filters-bar">
+                            <input type="text" class="search-input" id="tradeSearch" placeholder="بحث بالمتداول أو الأصل..." oninput="filterTrades()">
+                            <select class="filter-select" id="tradeResult" onchange="filterTrades()">
+                                <option value="all">الكل</option>
+                                <option value="ربح">الأرباح فقط</option>
+                                <option value="خسارة">الخسائر فقط</option>
+                            </select>
+                            <select class="filter-select" id="tradeAsset" onchange="filterTrades()">
+                                <option value="all">جميع الأصول</option>
+                            </select>
+                            <select class="filter-select" id="tradeSession" onchange="filterTrades()">
+                                <option value="all">جميع الجلسات</option>
+                                <option value="أسيوية">الآسيوية</option>
+                                <option value="أوروبية">الأوروبية</option>
+                                <option value="أمريكية">الأمريكية</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>المتداول</th>
+                                        <th>الأصل</th>
+                                        <th>النوع</th>
+                                        <th>المبلغ</th>
+                                        <th>النتيجة</th>
+                                        <th>الربح/الخسارة</th>
+                                        <th>الجلسة</th>
+                                        <th>التاريخ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tradesTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="empty-state hidden" id="tradesEmpty">
+                            <i class="fas fa-inbox"></i>
+                            <p>لا يوجد صفقات</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Tab -->
+            <div class="tab-content" id="tab-charts">
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-pie"></i> نسبة الأرباح والخسائر</h4>
+                        <canvas id="winLossChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-bar"></i> الأصول الأكثر تداولاً</h4>
+                        <canvas id="assetsChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-line"></i> الأرباح حسب المتداول</h4>
+                        <canvas id="profitByUserChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-bar"></i> الصفقات حسب الجلسة</h4>
+                        <canvas id="sessionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-line"></i> الصفقات اليومية (آخر 30 يوم)</h4>
+                        <canvas id="dailyTradesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4><i class="fas fa-ranking-star"></i> أفضل 10 متداولين (نسبة الفوز)</h4>
+                        <canvas id="topTradersChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Detail Modal -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalUserName">تفاصيل المستخدم</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== Firebase Config ==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyB6r4WYjiH7Ebrsyj-bI1kdjwPUIx0s6YQ",
+            authDomain: "pstrader-64eaa.firebaseapp.com",
+            projectId: "pstrader-64eaa",
+            storageBucket: "pstrader-64eaa.firebasestorage.app",
+            messagingSenderId: "30447360884",
+            appId: "1:30447360884:web:b11cf8473d746a6fb22a21",
+            measurementId: "G-JWVDME16G8"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // ========== App State ==========
+        let allUsers = [];
+        let allTrades = [];
+        let filteredUsers = [];
+        let filteredTrades = [];
+        let chartInstances = {};
+
+        // ========== Auth ==========
+        function adminLogin() {
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value;
+            const errorEl = document.getElementById('authError');
+
+            if (!email || !password) {
+                errorEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            document.getElementById('adminLoginBtn').disabled = true;
+            errorEl.style.display = 'none';
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    document.getElementById('authOverlay').classList.add('hidden');
+                    document.getElementById('appMain').classList.remove('hidden');
+                    loadAllData();
+                })
+                .catch((error) => {
+                    let msg = 'خطأ في تسجيل الدخول';
+                    if (error.code === 'auth/user-not-found') msg = 'البريد الإلكتروني غير مسجل';
+                    else if (error.code === 'auth/wrong-password') msg = 'كلمة المرور غير صحيحة';
+                    else if (error.code === 'auth/invalid-email') msg = 'البريد الإلكتروني غير صالح';
+                    else if (error.code === 'auth/invalid-credential') msg = 'بيانات الدخول غير صحيحة';
+                    errorEl.textContent = msg;
+                    errorEl.style.display = 'block';
+                    document.getElementById('adminLoginBtn').disabled = false;
+                });
+        }
+
+        // Allow Enter key to login
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') adminLogin();
+            });
+            document.getElementById('adminEmail').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') document.getElementById('adminPassword').focus();
+            });
+
+            // Check if already logged in
+            auth.onAuthStateChanged(function(user) {
+                if (user) {
+                    document.getElementById('authOverlay').classList.add('hidden');
+                    document.getElementById('appMain').classList.remove('hidden');
+                    loadAllData();
+                }
+            });
+        });
+
+        function adminLogout() {
+            auth.signOut().then(() => {
+                document.getElementById('appMain').classList.add('hidden');
+                document.getElementById('authOverlay').classList.remove('hidden');
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminLoginBtn').disabled = false;
+            });
+        }
+
+        // ========== Data Loading ==========
+        async function loadAllData() {
+            showLoading(true);
+            try {
+                const [usersSnap, tradesSnap] = await Promise.all([
+                    db.collection('users').get(),
+                    db.collection('trades').orderBy('date', 'desc').get()
+                ]);
+
+                allUsers = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                allTrades = tradesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Compute extra stats per user from trades
+                allUsers.forEach(user => {
+                    const userTrades = allTrades.filter(t => t.userId === user.id);
+                    user._tradesCount = userTrades.length;
+                    user._totalProfit = userTrades.filter(t => t.result === 'ربح').reduce((sum, t) => sum + Math.abs(t.profitLoss || 0), 0);
+                    user._totalLoss = userTrades.filter(t => t.result === 'خسارة').reduce((sum, t) => sum + Math.abs(t.profitLoss || 0), 0);
+                    user._netProfit = user._totalProfit - user._totalLoss;
+                    user._winCount = userTrades.filter(t => t.result === 'ربح').length;
+                    user._winRate = userTrades.length > 0 ? ((user._winCount / userTrades.length) * 100) : 0;
+                    user._trades = userTrades;
+                });
+
+                filteredUsers = [...allUsers];
+                filteredTrades = [...allTrades];
+
+                updateStats();
+                renderUsersTable();
+                renderTradesTable();
+                populateAssetFilter();
+                renderCharts();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('حدث خطأ في تحميل البيانات: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function refreshData() {
+            loadAllData();
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+        }
+
+        // ========== Stats ==========
+        function updateStats() {
+            document.getElementById('totalUsers').textContent = allUsers.length.toLocaleString();
+            document.getElementById('totalTrades').textContent = allTrades.length.toLocaleString();
+
+            const totalProfit = allTrades.filter(t => t.result === 'ربح').reduce((sum, t) => sum + Math.abs(t.profitLoss || 0), 0);
+            const totalLoss = allTrades.filter(t => t.result === 'خسارة').reduce((sum, t) => sum + Math.abs(t.profitLoss || 0), 0);
+            const winCount = allTrades.filter(t => t.result === 'ربح').length;
+            const avgWinRate = allTrades.length > 0 ? ((winCount / allTrades.length) * 100).toFixed(1) : 0;
+
+            document.getElementById('totalProfits').textContent = '$' + totalProfit.toLocaleString();
+            document.getElementById('totalLosses').textContent = '$' + totalLoss.toLocaleString();
+            document.getElementById('avgWinRate').textContent = avgWinRate + '%';
+        }
+
+        // ========== Tabs ==========
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (tab === 'charts') {
+                setTimeout(() => renderCharts(), 100);
+            }
+        }
+
+        // ========== Users Table ==========
+        function renderUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            const empty = document.getElementById('usersEmpty');
+
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            tbody.innerHTML = filteredUsers.map((user, idx) => {
+                const initials = (user.name || 'U').substring(0, 2);
+                const netClass = user._netProfit >= 0 ? 'text-profit' : 'text-loss';
+                const winRateClass = user._winRate >= 50 ? 'text-profit' : user._winRate > 0 ? 'text-loss' : 'text-muted';
+                const createdAt = user.createdAt ? formatDate(user.createdAt) : '—';
+
+                return `<tr class="clickable-row" onclick="openUserDetail('${user.id}')">
+                    <td>${idx + 1}</td>
+                    <td>
+                        <div class="user-name-cell">
+                            <div class="user-avatar">${initials}</div>
+                            <span>${escapeHtml(user.name || 'بدون اسم')}</span>
+                        </div>
+                    </td>
+                    <td>${escapeHtml(user.email || '—')}</td>
+                    <td>$${(user.currentCapital || 0).toLocaleString()}</td>
+                    <td>${user._tradesCount}</td>
+                    <td class="text-profit">$${user._totalProfit.toLocaleString()}</td>
+                    <td class="text-loss">$${user._totalLoss.toLocaleString()}</td>
+                    <td class="${netClass}">$${user._netProfit.toLocaleString()}</td>
+                    <td class="${winRateClass}">${user._winRate.toFixed(1)}%</td>
+                    <td>${createdAt}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function filterUsers() {
+            const search = document.getElementById('userSearch').value.toLowerCase().trim();
+            const sortBy = document.getElementById('userSort').value;
+
+            filteredUsers = allUsers.filter(user => {
+                if (!search) return true;
+                return (user.name || '').toLowerCase().includes(search) ||
+                       (user.email || '').toLowerCase().includes(search);
+            });
+
+            filteredUsers.sort((a, b) => {
+                switch (sortBy) {
+                    case 'name': return (a.name || '').localeCompare(b.name || '', 'ar');
+                    case 'trades': return b._tradesCount - a._tradesCount;
+                    case 'profit': return b._netProfit - a._netProfit;
+                    case 'winrate': return b._winRate - a._winRate;
+                    case 'capital': return (b.currentCapital || 0) - (a.currentCapital || 0);
+                    case 'recent':
+                        const aTime = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+                        const bTime = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+                        return bTime - aTime;
+                    default: return 0;
+                }
+            });
+
+            renderUsersTable();
+        }
+
+        // ========== Trades Table ==========
+        function renderTradesTable() {
+            const tbody = document.getElementById('tradesTableBody');
+            const empty = document.getElementById('tradesEmpty');
+
+            if (filteredTrades.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            tbody.innerHTML = filteredTrades.map((trade, idx) => {
+                const resultClass = trade.result === 'ربح' ? 'badge-profit' : 'badge-loss';
+                const plClass = (trade.profitLoss || 0) >= 0 ? 'text-profit' : 'text-loss';
+                const plSign = (trade.profitLoss || 0) >= 0 ? '+' : '';
+                const tradeDate = trade.date ? formatDate(trade.date) : '—';
+
+                return `<tr>
+                    <td>${idx + 1}</td>
+                    <td>${escapeHtml(trade.userName || '—')}</td>
+                    <td>${escapeHtml(trade.asset || '—')}</td>
+                    <td>${escapeHtml(trade.tradeType || '—')}</td>
+                    <td>$${(trade.amount || 0).toLocaleString()}</td>
+                    <td><span class="badge ${resultClass}">${escapeHtml(trade.result || '—')}</span></td>
+                    <td class="${plClass}">${plSign}$${Math.abs(trade.profitLoss || 0).toLocaleString()}</td>
+                    <td>${escapeHtml(trade.session || '—')}</td>
+                    <td>${tradeDate}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function filterTrades() {
+            const search = document.getElementById('tradeSearch').value.toLowerCase().trim();
+            const resultFilter = document.getElementById('tradeResult').value;
+            const assetFilter = document.getElementById('tradeAsset').value;
+            const sessionFilter = document.getElementById('tradeSession').value;
+
+            filteredTrades = allTrades.filter(trade => {
+                if (search && !(trade.userName || '').toLowerCase().includes(search) && !(trade.asset || '').toLowerCase().includes(search)) {
+                    return false;
+                }
+                if (resultFilter !== 'all' && trade.result !== resultFilter) return false;
+                if (assetFilter !== 'all' && trade.asset !== assetFilter) return false;
+                if (sessionFilter !== 'all' && trade.session !== sessionFilter) return false;
+                return true;
+            });
+
+            renderTradesTable();
+        }
+
+        function populateAssetFilter() {
+            const assets = [...new Set(allTrades.map(t => t.asset).filter(Boolean))];
+            const select = document.getElementById('tradeAsset');
+            select.innerHTML = '<option value="all">جميع الأصول</option>';
+            assets.forEach(asset => {
+                select.innerHTML += `<option value="${escapeHtml(asset)}">${escapeHtml(asset)}</option>`;
+            });
+        }
+
+        // ========== User Detail Modal ==========
+        function openUserDetail(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) return;
+
+            document.getElementById('modalUserName').textContent = user.name || 'بدون اسم';
+
+            const trades = user._trades || [];
+            const avgTrade = trades.length > 0 ? (trades.reduce((s, t) => s + (t.profitLoss || 0), 0) / trades.length) : 0;
+            const bestTrade = trades.length > 0 ? Math.max(...trades.map(t => t.profitLoss || 0)) : 0;
+            const worstTrade = trades.length > 0 ? Math.min(...trades.map(t => t.profitLoss || 0)) : 0;
+            const netClass = user._netProfit >= 0 ? 'text-profit' : 'text-loss';
+
+            let html = `
+                <div class="user-detail-stats">
+                    <div class="detail-stat">
+                        <div class="val">${user._tradesCount}</div>
+                        <div class="lbl">عدد الصفقات</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="val text-profit">$${user._totalProfit.toLocaleString()}</div>
+                        <div class="lbl">إجمالي الأرباح</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="val text-loss">$${user._totalLoss.toLocaleString()}</div>
+                        <div class="lbl">إجمالي الخسائر</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="val ${netClass}">$${user._netProfit.toLocaleString()}</div>
+                        <div class="lbl">صافي الربح</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="val" style="color: ${user._winRate >= 50 ? '#34d399' : '#f87171'}">${user._winRate.toFixed(1)}%</div>
+                        <div class="lbl">نسبة الفوز</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="val">$${(user.currentCapital || 0).toLocaleString()}</div>
+                        <div class="lbl">رأس المال الحالي</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="val">$${(user.initialCapital || 0).toLocaleString()}</div>
+                        <div class="lbl">رأس المال الأولي</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="val text-profit">$${bestTrade.toLocaleString()}</div>
+                        <div class="lbl">أفضل صفقة</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="val text-loss">$${worstTrade.toLocaleString()}</div>
+                        <div class="lbl">أسوأ صفقة</div>
+                    </div>
+                </div>
+            `;
+
+            if (trades.length > 0) {
+                html += `
+                    <h4 style="margin-bottom: 12px; color: #94a3b8;">
+                        <i class="fas fa-history"></i> سجل الصفقات (${trades.length})
+                    </h4>
+                    <div class="user-trades-list">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الأصل</th>
+                                    <th>النوع</th>
+                                    <th>المبلغ</th>
+                                    <th>النتيجة</th>
+                                    <th>الربح/الخسارة</th>
+                                    <th>الجلسة</th>
+                                    <th>التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${trades.map((t, i) => {
+                                    const rc = t.result === 'ربح' ? 'badge-profit' : 'badge-loss';
+                                    const pc = (t.profitLoss || 0) >= 0 ? 'text-profit' : 'text-loss';
+                                    const ps = (t.profitLoss || 0) >= 0 ? '+' : '';
+                                    return `<tr>
+                                        <td>${i + 1}</td>
+                                        <td>${escapeHtml(t.asset || '—')}</td>
+                                        <td>${escapeHtml(t.tradeType || '—')}</td>
+                                        <td>$${(t.amount || 0).toLocaleString()}</td>
+                                        <td><span class="badge ${rc}">${escapeHtml(t.result || '—')}</span></td>
+                                        <td class="${pc}">${ps}$${Math.abs(t.profitLoss || 0).toLocaleString()}</td>
+                                        <td>${escapeHtml(t.session || '—')}</td>
+                                        <td>${t.date ? formatDate(t.date) : '—'}</td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                html += `<div class="empty-state"><i class="fas fa-inbox"></i><p>لا يوجد صفقات لهذا المستخدم</p></div>`;
+            }
+
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('userModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').classList.remove('active');
+        }
+
+        // Close modal on overlay click
+        document.getElementById('userModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Close modal on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // ========== Charts ==========
+        function renderCharts() {
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = '#334155';
+
+            renderWinLossChart();
+            renderAssetsChart();
+            renderProfitByUserChart();
+            renderSessionChart();
+            renderDailyTradesChart();
+            renderTopTradersChart();
+        }
+
+        function destroyChart(name) {
+            if (chartInstances[name]) {
+                chartInstances[name].destroy();
+                chartInstances[name] = null;
+            }
+        }
+
+        function renderWinLossChart() {
+            destroyChart('winLoss');
+            const wins = allTrades.filter(t => t.result === 'ربح').length;
+            const losses = allTrades.filter(t => t.result === 'خسارة').length;
+
+            chartInstances.winLoss = new Chart(document.getElementById('winLossChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['أرباح', 'خسائر'],
+                    datasets: [{
+                        data: [wins, losses],
+                        backgroundColor: ['#34d399', '#f87171'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function renderAssetsChart() {
+            destroyChart('assets');
+            const assetCounts = {};
+            allTrades.forEach(t => {
+                if (t.asset) assetCounts[t.asset] = (assetCounts[t.asset] || 0) + 1;
+            });
+
+            const sorted = Object.entries(assetCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            const colors = ['#818cf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#38bdf8', '#fb923c', '#e879f9', '#4ade80', '#f472b6'];
+
+            chartInstances.assets = new Chart(document.getElementById('assetsChart'), {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(s => s[0]),
+                    datasets: [{
+                        label: 'عدد الصفقات',
+                        data: sorted.map(s => s[1]),
+                        backgroundColor: colors.slice(0, sorted.length),
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#1e293b' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderProfitByUserChart() {
+            destroyChart('profitByUser');
+            const top = [...allUsers].sort((a, b) => b._netProfit - a._netProfit).slice(0, 10);
+
+            chartInstances.profitByUser = new Chart(document.getElementById('profitByUserChart'), {
+                type: 'bar',
+                data: {
+                    labels: top.map(u => u.name || 'بدون اسم'),
+                    datasets: [{
+                        label: 'صافي الربح ($)',
+                        data: top.map(u => u._netProfit),
+                        backgroundColor: top.map(u => u._netProfit >= 0 ? '#34d399' : '#f87171'),
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        function renderSessionChart() {
+            destroyChart('session');
+            const sessions = {};
+            allTrades.forEach(t => {
+                if (t.session) sessions[t.session] = (sessions[t.session] || 0) + 1;
+            });
+
+            chartInstances.session = new Chart(document.getElementById('sessionChart'), {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(sessions),
+                    datasets: [{
+                        data: Object.values(sessions),
+                        backgroundColor: ['#818cf8', '#34d399', '#fbbf24', '#f87171'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function renderDailyTradesChart() {
+            destroyChart('dailyTrades');
+            const now = new Date();
+            const days = {};
+
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const key = d.toISOString().split('T')[0];
+                days[key] = { wins: 0, losses: 0 };
+            }
+
+            allTrades.forEach(t => {
+                if (!t.date) return;
+                const d = t.date.toDate ? t.date.toDate() : new Date(t.date);
+                const key = d.toISOString().split('T')[0];
+                if (days[key]) {
+                    if (t.result === 'ربح') days[key].wins++;
+                    else days[key].losses++;
+                }
+            });
+
+            const labels = Object.keys(days).map(d => {
+                const parts = d.split('-');
+                return parts[2] + '/' + parts[1];
+            });
+
+            chartInstances.dailyTrades = new Chart(document.getElementById('dailyTradesChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'أرباح',
+                            data: Object.values(days).map(d => d.wins),
+                            borderColor: '#34d399',
+                            backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'خسائر',
+                            data: Object.values(days).map(d => d.losses),
+                            borderColor: '#f87171',
+                            backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: {
+                        x: { grid: { color: '#1e293b' } },
+                        y: { grid: { color: '#1e293b' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderTopTradersChart() {
+            destroyChart('topTraders');
+            const qualified = allUsers.filter(u => u._tradesCount >= 1);
+            const top = [...qualified].sort((a, b) => b._winRate - a._winRate).slice(0, 10);
+
+            chartInstances.topTraders = new Chart(document.getElementById('topTradersChart'), {
+                type: 'bar',
+                data: {
+                    labels: top.map(u => u.name || 'بدون اسم'),
+                    datasets: [{
+                        label: 'نسبة الفوز (%)',
+                        data: top.map(u => u._winRate.toFixed(1)),
+                        backgroundColor: top.map((_, i) => {
+                            const colors = ['#fbbf24', '#94a3b8', '#cd7f32', '#818cf8', '#818cf8', '#818cf8', '#818cf8', '#818cf8', '#818cf8', '#818cf8'];
+                            return colors[i] || '#818cf8';
+                        }),
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { color: '#1e293b' }, max: 100, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ========== Export CSV ==========
+        function exportCSV() {
+            if (allTrades.length === 0) {
+                alert('لا يوجد بيانات للتصدير');
+                return;
+            }
+
+            const BOM = '\uFEFF';
+            const headers = ['المتداول', 'البريد', 'الأصل', 'النوع', 'المبلغ', 'النتيجة', 'الربح/الخسارة', 'الجلسة', 'التاريخ'];
+            const rows = allTrades.map(t => {
+                const user = allUsers.find(u => u.id === t.userId);
+                return [
+                    t.userName || '—',
+                    user ? user.email : '—',
+                    t.asset || '—',
+                    t.tradeType || '—',
+                    t.amount || 0,
+                    t.result || '—',
+                    t.profitLoss || 0,
+                    t.session || '—',
+                    t.date ? formatDateCSV(t.date) : '—'
+                ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+            });
+
+            const csv = BOM + headers.join(',') + '\n' + rows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trades_export_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ========== Helpers ==========
+        function formatDate(timestamp) {
+            try {
+                const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                return date.toLocaleDateString('ar-EG', {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                });
+            } catch {
+                return '—';
+            }
+        }
+
+        function formatDateCSV(timestamp) {
+            try {
+                const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                return date.toISOString().split('T')[0];
+            } catch {
+                return '—';
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
