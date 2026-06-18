@@ -747,6 +747,10 @@
                 <button class="btn btn-outline" onclick="exportCSV()">
                     <i class="fas fa-file-csv"></i> تصدير CSV
                 </button>
+
+                <button class="btn btn-danger" onclick="resetAllData()">
+                    <i class="fas fa-trash"></i> إعادة ضبط البيانات
+                </button>
                 <button class="btn btn-danger" onclick="adminLogout()">
                     <i class="fas fa-sign-out-alt"></i> خروج
                 </button>
@@ -1600,6 +1604,48 @@
             a.click();
             URL.revokeObjectURL(url);
         }
+
+        async function resetAllData() {
+            const confirmReset = confirm(
+                "⚠️ سيتم حذف جميع المستخدمين والصفقات نهائياً. هل أنت متأكد؟"
+            );
+
+            if (!confirmReset) return;
+
+            try {
+                showLoading(true);
+
+                // حذف جميع الصفقات
+                const tradesSnap = await db.collection('trades').get();
+                const batch1 = db.batch();
+
+                tradesSnap.forEach(doc => {
+                    batch1.delete(doc.ref);
+                });
+
+                await batch1.commit();
+
+                // حذف جميع المستخدمين
+                const usersSnap = await db.collection('users').get();
+                const batch2 = db.batch();
+
+                usersSnap.forEach(doc => {
+                    batch2.delete(doc.ref);
+                });
+
+                await batch2.commit();
+
+                alert("✅ تم حذف جميع البيانات بنجاح");
+                loadAllData();
+
+            } catch (error) {
+                console.error(error);
+                alert("حدث خطأ أثناء إعادة الضبط");
+            } finally {
+                showLoading(false);
+            }
+        }
+
 
         // ========== Helpers ==========
         function formatDate(timestamp) {
