@@ -15,6 +15,9 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
+    <!-- html2canvas لتحويل البطاقة إلى صورة -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -121,6 +124,13 @@
 
         <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content">
+
+            <!-- ===== زر مشاركة البطاقة ===== -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px; gap: 10px; flex-wrap: wrap;">
+                <button id="shareCardBtn" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <i class="fas fa-share-alt"></i> مشاركة بطاقة اليوم
+                </button>
+            </div>
 
             <!-- ===== KPI DASHBOARD ===== -->
             <section class="kpi-grid" id="kpiGrid">
@@ -509,6 +519,80 @@
                     <i class="fas fa-save"></i> حفظ التعديلات
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- ===== مودال بطاقة المشاركة ===== -->
+    <div id="shareModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 450px; background: transparent; box-shadow: none; border: none; backdrop-filter: none;">
+            <!-- البطاقة نفسها -->
+            <div id="tradeCard" style="border-radius: 24px; padding: 28px 24px; background: linear-gradient(145deg, #1a1a2e, #16213e); color: #fff; box-shadow: 0 25px 60px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.08); position: relative; overflow: hidden; direction: rtl; font-family: 'Cairo', sans-serif;">
+                
+                <!-- خلفية مزخرفة -->
+                <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(102,126,234,0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+                <div style="position: absolute; bottom: -30px; left: -30px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(118,75,162,0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+
+                <!-- رأس البطاقة -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; z-index: 2;">
+                    <div>
+                        <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(135deg, #00d4aa, #4a7cf7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">PS-Trader</div>
+                        <div style="font-size: 12px; color: #a0aec0; margin-top: 2px;">تقرير الأداء اليومي</div>
+                    </div>
+                    <div style="font-size: 28px;">📊</div>
+                </div>
+
+                <!-- التاريخ -->
+                <div style="text-align: center; margin-bottom: 20px; position: relative; z-index: 2;">
+                    <span style="background: rgba(255,255,255,0.06); padding: 4px 16px; border-radius: 30px; font-size: 14px; color: #cbd5e1; border: 1px solid rgba(255,255,255,0.06);" id="cardDate">--</span>
+                </div>
+
+                <!-- الإحصائيات الرئيسية (شبكة 2x2) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; position: relative; z-index: 2;">
+                    <div style="background: rgba(255,255,255,0.04); border-radius: 14px; padding: 14px 12px; text-align: center; border: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">عدد الصفقات</div>
+                        <div style="font-size: 26px; font-weight: 800; margin-top: 4px;" id="cardTotalTrades">0</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); border-radius: 14px; padding: 14px 12px; text-align: center; border: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">نسبة الفوز</div>
+                        <div style="font-size: 26px; font-weight: 800; margin-top: 4px;" id="cardWinRate">0%</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); border-radius: 14px; padding: 14px 12px; text-align: center; border: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">صافي الربح</div>
+                        <div style="font-size: 26px; font-weight: 800; margin-top: 4px;" id="cardNetProfit">$0.00</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.04); border-radius: 14px; padding: 14px 12px; text-align: center; border: 1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">أفضل صفقة</div>
+                        <div style="font-size: 26px; font-weight: 800; margin-top: 4px;" id="cardBestTrade">$0.00</div>
+                    </div>
+                </div>
+
+                <!-- تذييل البطاقة (رأس المال) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); position: relative; z-index: 2;">
+                    <div>
+                        <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">رأس المال الحالي</div>
+                        <div style="font-size: 18px; font-weight: 700;" id="cardCapital">$0.00</div>
+                    </div>
+                    <div style="text-align: left; font-size: 10px; color: #64748b; direction: ltr;">
+                        <span id="cardWins">0</span> ربح / <span id="cardLosses">0</span> خسارة
+                    </div>
+                </div>
+                
+                <!-- علامة مائية -->
+                <div style="position: absolute; bottom: 8px; right: 16px; font-size: 9px; color: rgba(255,255,255,0.08); letter-spacing: 2px; z-index: 1;">PS-TRADER</div>
+            </div>
+
+            <!-- أزرار التحكم أسفل البطاقة -->
+            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
+                <button id="downloadCardBtn" class="btn-primary" style="background: #00d4aa; box-shadow: 0 8px 24px rgba(0,212,170,0.3);">
+                    <i class="fas fa-download"></i> تحميل الصورة
+                </button>
+                <button id="shareCardActionBtn" class="btn-primary" style="background: #4a7cf7; box-shadow: 0 8px 24px rgba(74,124,247,0.3);">
+                    <i class="fas fa-share"></i> مشاركة
+                </button>
+                <button onclick="closeModal('shareModal')" class="btn-secondary" style="background: rgba(255,255,255,0.06); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); padding: 10px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: inherit;">
+                    إغلاق
+                </button>
+            </div>
         </div>
     </div>
 
