@@ -1,4 +1,6 @@
-// ========== تهيئة Firebase ==========
+// ================================================================
+// FIREBASE CONFIG
+// ================================================================
 const firebaseConfig = {
     apiKey: "AIzaSyB6r4WYjiH7Ebrsyj-bI1kdjwPUIx0s6YQ",
     authDomain: "pstrader-64eaa.firebaseapp.com",
@@ -9,3340 +11,955 @@ const firebaseConfig = {
     measurementId: "G-JWVDME16G8"
 };
 
-// Initialize Firebase
-try {
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-        console.log("✅ Firebase initialized successfully");
-    } else {
-        firebase.app();
-        console.log("✅ Firebase already initialized");
-    }
-} catch (error) {
-    console.error("❌ Firebase initialization error:", error);
-    showError("خطأ في تهيئة Firebase. تأكد من اتصال الإنترنت.");
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
-// الحصول على الخدمات
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-// إعداد استمرارية الجلسة لمنع تسجيل الخروج التلقائي
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-    .then(() => {
-        console.log("✅ تم تعيين استمرارية الجلسة إلى LOCAL");
-    })
-    .catch((error) => {
-        console.error("❌ خطأ في تعيين استمرارية الجلسة:", error);
-    });
-
-// حالة التطبيق
+// ================================================================
+// STATE
+// ================================================================
 let currentUser = null;
 let userData = null;
 let userTrades = [];
 let userStrategy = null;
-let sessionRefreshInterval = null;
-let allTradersData = [];
-
-// متغيرات التعديل
+let chartInstances = {};
 let editingTradeId = null;
-let originalTradeData = null;
 
-// متغيرات التقويم
+// Calendar state
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 
-// متغيرات الرسوم البيانية
-let chartInstances = {};
+// ================================================================
+// DOM REFS
+// ================================================================
+const $ = id => document.getElementById(id);
+const appMain = $('appMain');
+const authOverlay = $('authOverlay');
+const themeToggle = $('themeToggle');
 
-// متغيرات التحليل المتقدم
-let advancedMetrics = {
-    lossPatterns: {},
-    riskRewardRatio: 0,
-    maxDrawdown: 0,
-    sharpeRatio: 0,
-    winLossRatio: 0,
-    optimalLotSize: 0
-};
-
-// ========== تهيئة التطبيق عند تحميل الصفحة ==========
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("🚀 Starting application...");
-    
-    // إخفاء محتوى التطبيق في البداية
-    const appContent = document.getElementById('appContent');
-    if (appContent) {
-        appContent.style.display = 'none';
+// ================================================================
+// THEME
+// ================================================================
+function initTheme() {
+    const saved = localStorage.getItem('ps-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    updateThemeIcon(saved);
+}
+function updateThemeIcon(theme) {
+    const icon = themeToggle?.querySelector('i');
+    if (icon) {
+        icon.className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
     }
-    
-    // إظهار قسم المصادقة
-    const authSection = document.getElementById('authSection');
-    if (authSection) {
-        authSection.style.display = 'block';
-    }
-    
-    // إخفاء معلومات المستخدم
-    const userInfo = document.getElementById('userInfo');
-    if (userInfo) {
-        userInfo.style.display = 'none';
-    }
-    
-    // إعداد التواريخ الافتراضية
-    initializeDates();
-    
-    // إعداد المستمعين للأحداث
-    setupEventListeners();
-    
-    // التحقق من حالة المصادقة
-    auth.onAuthStateChanged(handleAuthStateChange);
-    
-    // اختبار اتصال Firebase
-    testFirebaseConnection();
-    
-    // إظهار تبويب تسجيل الدخول افتراضياً
-    showAuthForm('login');
+}
+themeToggle?.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('ps-theme', next);
+    updateThemeIcon(next);
+    // Re-render charts with new theme
+    Object.values(chartInstances).forEach(chart => {
+        if (chart && chart.update) chart.update();
+    });
 });
 
-// ========== اختبار اتصال Firebase ==========
-async function testFirebaseConnection() {
+// ================================================================
+// AUTH
+// ================================================================
+function showAuthForm(type) {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.form === type));
+    document.querySelectorAll('.auth-form').forEach(f => f.classList.toggle('active', f.id === type + 'Form'));
+}
+
+document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => showAuthForm(tab.dataset.form));
+});
+
+// Login
+$('loginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('loginEmail').value.trim();
+    const password = $('loginPassword').value;
+    const alert = $('loginAlert');
+    if (!email || !password) return showAlert(alert, 'يرجى ملء جميع الحقول', 'danger');
     try {
-        console.log("🔍 Testing Firebase connection...");
-        if (auth) {
-            console.log("✅ Firebase Auth service is available");
-        }
-    } catch (error) {
-        console.error("❌ Firebase connection test failed:", error);
+        showAlert(alert, 'جاري تسجيل الدخول...', 'info');
+        await auth.signInWithEmailAndPassword(email, password);
+        showAlert(alert, 'تم تسجيل الدخول بنجاح!', 'success');
+        setTimeout(() => { alert.style.display = 'none'; }, 1500);
+    } catch (err) {
+        showAlert(alert, getAuthMessage(err.code), 'danger');
+        $('loginPassword').value = '';
     }
-}
+});
 
-// ========== إعداد المستمعين للأحداث ==========
-function setupEventListeners() {
-    console.log("🔧 Setting up event listeners...");
-    
-    // تسجيل الدخول
-    const loginForm = document.getElementById('loginUserForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            loginUser();
-        });
-    }
-    
-    // إنشاء حساب
-    const registerForm = document.getElementById('registerUserForm');
-    if (registerForm) {
-        registerForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            registerUser();
-        });
-    }
-    
-    // تسجيل الخروج
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', logout);
-    }
-    
-    // تبديل تبويبات التسجيل
-    document.querySelectorAll('.auth-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            const formType = this.getAttribute('data-form');
-            showAuthForm(formType);
-        });
-    });
-    
-    // تعديل رأس المال
-    const editCapitalBtn = document.getElementById('editCapitalBtn');
-    if (editCapitalBtn) {
-        editCapitalBtn.addEventListener('click', showCapitalModal);
-    }
-    
-    // حفظ رأس المال
-    const saveCapitalBtn = document.getElementById('saveCapitalBtn');
-    if (saveCapitalBtn) {
-        saveCapitalBtn.addEventListener('click', updateCapital);
-    }
-    
-    // إغلاق modals
-    document.querySelectorAll('.modal .close').forEach(closeBtn => {
-        closeBtn.addEventListener('click', function() {
-            this.closest('.modal').style.display = 'none';
-        });
-    });
-    
-    // إغلاق modal عند النقر خارجها
-    window.addEventListener('click', function(e) {
-        if (e.target.classList.contains('modal')) {
-            e.target.style.display = 'none';
-        }
-    });
-    
-    // إضافة صفقة
-    const tradeForm = document.getElementById('tradeForm');
-    if (tradeForm) {
-        tradeForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            addTrade();
-        });
-    }
-    
-    // إدارة اختيار الأصل الآخر
-    const assetSelect = document.getElementById('asset');
-    const otherAssetInput = document.getElementById('otherAsset');
-    if (assetSelect && otherAssetInput) {
-        assetSelect.addEventListener('change', function() {
-            otherAssetInput.style.display = this.value === 'other' ? 'block' : 'none';
-            if (this.value !== 'other') {
-                otherAssetInput.value = '';
-            }
-        });
-    }
-    
-    // معاينة الصورة
-    const tradeImage = document.getElementById('tradeImage');
-    if (tradeImage) {
-        tradeImage.addEventListener('change', previewImage);
-    }
-    
-    // إزالة الصورة
-    const removeImageBtn = document.getElementById('removeImageBtn');
-    if (removeImageBtn) {
-        removeImageBtn.addEventListener('click', removeImagePreview);
-    }
-    
-    // حفظ الاستراتيجية
-    const saveStrategyBtn = document.getElementById('saveStrategyBtn');
-    if (saveStrategyBtn) {
-        saveStrategyBtn.addEventListener('click', saveStrategy);
-    }
-    
-    // التبويبات الرئيسية
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            const tabId = this.getAttribute('data-tab');
-            switchTab(tabId);
-        });
-    });
-    
-    // تصفية الصفقات
-    const filterAsset = document.getElementById('filterAsset');
-    const filterSession = document.getElementById('filterSession');
-    const filterResult = document.getElementById('filterResult');
-    
-    if (filterAsset) filterAsset.addEventListener('change', updateTradesList);
-    if (filterSession) filterSession.addEventListener('change', updateTradesList);
-    if (filterResult) filterResult.addEventListener('change', updateTradesList);
-    
-    // تصفية لوحة المتصدرين
-    const leaderboardType = document.getElementById('leaderboardType');
-    const timePeriod = document.getElementById('timePeriod');
-    const minTrades = document.getElementById('minTrades');
-    
-    if (leaderboardType) leaderboardType.addEventListener('change', loadLeaderboard);
-    if (timePeriod) timePeriod.addEventListener('change', loadLeaderboard);
-    if (minTrades) minTrades.addEventListener('change', loadLeaderboard);
-    
-    // تعديل الصفقات
-    const editTradeImage = document.getElementById('editTradeImage');
-    if (editTradeImage) {
-        editTradeImage.addEventListener('change', function() {
-            previewEditImage();
-        });
-    }
-    
-    // إزالة الصورة في نموذج التعديل
-    const editRemoveImageBtn = document.getElementById('editRemoveImageBtn');
-    if (editRemoveImageBtn) {
-        editRemoveImageBtn.addEventListener('click', function() {
-            removeEditImagePreview();
-        });
-    }
-    
-    // حفظ تعديلات الصفقة
-    const editTradeForm = document.getElementById('editTradeForm');
-    if (editTradeForm) {
-        editTradeForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            updateTrade();
-        });
-    }
-    
-    // إدارة اختيار الأصل الآخر في نموذج التعديل
-    const editAssetSelect = document.getElementById('editAsset');
-    const editOtherAssetInput = document.getElementById('editOtherAsset');
-    if (editAssetSelect && editOtherAssetInput) {
-        editAssetSelect.addEventListener('change', function() {
-            editOtherAssetInput.style.display = this.value === 'other' ? 'block' : 'none';
-            if (this.value !== 'other') {
-                editOtherAssetInput.value = '';
-            }
-        });
-    }
-    
-    // زر التحليل الذكي
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    if (analyzeBtn) {
-        analyzeBtn.addEventListener('click', performAdvancedAnalysis);
-    }
-    
-    console.log("✅ Event listeners setup complete");
-}
+// Register
+$('registerForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('registerName').value.trim();
+    const email = $('registerEmail').value.trim();
+    const password = $('registerPassword').value;
+    const confirm = $('registerConfirmPassword').value;
+    const capital = parseFloat($('initialCapital').value) || 1000;
+    const alert = $('registerAlert');
 
-// ========== معالجة حالة المصادقة ==========
-function handleAuthStateChange(user) {
-    console.log("👤 Auth state changed:", user ? "User logged in" : "No user");
-    
+    if (!name || !email || !password || !confirm) return showAlert(alert, 'يرجى ملء جميع الحقول', 'danger');
+    if (name.length < 2) return showAlert(alert, 'الاسم يجب أن يكون حرفين على الأقل', 'danger');
+    if (password.length < 6) return showAlert(alert, 'كلمة المرور 6 أحرف على الأقل', 'danger');
+    if (password !== confirm) return showAlert(alert, 'كلمات المرور غير متطابقة', 'danger');
+    if (capital < 1) return showAlert(alert, 'رأس المال يجب أن يكون أكبر من 0', 'danger');
+
+    try {
+        showAlert(alert, 'جاري إنشاء الحساب...', 'info');
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        await db.collection('users').doc(cred.user.uid).set({
+            name, email, initialCapital: capital, currentCapital: capital,
+            totalTrades: 0, totalProfit: 0, totalLoss: 0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showAlert(alert, 'تم إنشاء الحساب بنجاح!', 'success');
+        setTimeout(() => alert.style.display = 'none', 1500);
+    } catch (err) {
+        showAlert(alert, getAuthMessage(err.code), 'danger');
+    }
+});
+
+// Logout
+$('logoutBtn')?.addEventListener('click', () => {
+    auth.signOut();
+});
+
+// Auth state
+auth.onAuthStateChanged(async (user) => {
     if (user) {
         currentUser = user;
-        console.log("✅ User authenticated:", user.email);
-        console.log("🔄 Starting user data loading...");
-        
-        // بدء تحديث الجلسة
-        startSessionRefresh();
-        
-        // تحديث token الجلسة
-        user.getIdToken(true).then(() => {
-            console.log("✅ Session token refreshed");
-        }).catch((error) => {
-            console.error("❌ Error refreshing token:", error);
-        });
-        
-        // تحميل بيانات المستخدم بعد تأكيد المصادقة
-        setTimeout(() => {
-            loadUserData();
-        }, 500);
-        
-    } else {
-        console.log("👋 No user, resetting app state");
-        resetAppState();
-        showAuthSection();
-    }
-}
-
-// ========== تحديث حالة التطبيق ==========
-async function refreshAppState() {
-    console.log("🔄 Refreshing app state...");
-    
-    if (!currentUser) {
-        console.log("⚠️ No user, cannot refresh app state");
-        return;
-    }
-    
-    try {
-        // تحديث بيانات المستخدم
+        authOverlay.classList.add('hidden');
+        appMain.classList.remove('hidden');
         await loadUserData();
-        
-        // تحديث الواجهة
-        updateUIAfterLogin();
-        
-        console.log("✅ App state refreshed successfully");
-        
-    } catch (error) {
-        console.error("❌ Error refreshing app state:", error);
-        showError('حدث خطأ في تحديث التطبيق');
+    } else {
+        currentUser = null;
+        userData = null;
+        userTrades = [];
+        appMain.classList.add('hidden');
+        authOverlay.classList.remove('hidden');
     }
-}
+});
 
-// ========== تحديث الواجهة بعد تسجيل الدخول ==========
-function updateUIAfterLogin() {
-    console.log("🎨 Updating UI after login...");
-    
-    // تحديث المعلومات في الشريط العلوي
-    if (userData) {
-        const userGreeting = document.getElementById('userGreeting');
-        const userCapital = document.getElementById('userCapital');
-        const currentCapitalDisplay = document.getElementById('currentCapitalDisplay');
-        const initialCapitalDisplay = document.getElementById('initialCapitalDisplay');
-        
-        if (userGreeting) userGreeting.textContent = `مرحباً، ${userData.name}`;
-        if (userCapital) userCapital.textContent = userData.currentCapital.toFixed(2);
-        if (currentCapitalDisplay) currentCapitalDisplay.textContent = `$${userData.currentCapital.toFixed(2)}`;
-        if (initialCapitalDisplay) initialCapitalDisplay.textContent = `$${userData.initialCapital.toFixed(2)}`;
-    }
-    
-    // إعادة رسم الرسوم البيانية فقط إذا كانت البيانات متوفرة
-    if (userTrades && userTrades.length > 0) {
-        setTimeout(() => {
-            updateCharts();
-        }, 1000);
-    }
-}
-
-// ========== بدء تحديث الجلسة ==========
-function startSessionRefresh() {
-    // إيقاف أي فاصل زمني سابق
-    if (sessionRefreshInterval) {
-        clearInterval(sessionRefreshInterval);
-    }
-    
-    // تحديث الجلسة كل 4 دقائق (240000 مللي ثانية)
-    sessionRefreshInterval = setInterval(() => {
-        if (currentUser) {
-            currentUser.getIdToken(true)
-                .then(() => {
-                    console.log("🔄 Session refreshed");
-                })
-                .catch((error) => {
-                    console.error("❌ Error refreshing session:", error);
-                });
-        }
-    }, 240000); // 4 دقائق
-}
-
-// ========== إعادة تعيين حالة التطبيق ==========
-function resetAppState() {
-    currentUser = null;
-    userData = null;
-    userTrades = [];
-    userStrategy = null;
-    allTradersData = [];
-    editingTradeId = null;
-    originalTradeData = null;
-    
-    // تنظيف الرسوم البيانية
-    cleanupCharts();
-    
-    // إيقاف تحديث الجلسة
-    if (sessionRefreshInterval) {
-        clearInterval(sessionRefreshInterval);
-        sessionRefreshInterval = null;
-    }
-}
-
-// ========== تنظيف الرسوم البيانية ==========
-function cleanupCharts() {
-    const chartIds = [
-        'winLossChart', 
-        'sessionChart', 
-        'assetChart', 
-        'profitChart', 
-        'capitalChart',
-        'monthlyTradesChart',
-        'monthlySuccessChart'
-    ];
-    
-    chartIds.forEach(chartId => {
-        const canvas = document.getElementById(chartId);
-        if (canvas) {
-            const chart = Chart.getChart(canvas);
-            if (chart) {
-                chart.destroy();
-            }
-            // تنظيف المتغير المحلي
-            chartInstances[chartId] = null;
-        }
-    });
-}
-
-// ========== دوال المصادقة ==========
-async function loginUser() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    const alertDiv = document.getElementById('loginAlert');
-    
-    // التحقق من الحقول
-    if (!email || !password) {
-        showAlert(alertDiv, 'يرجى ملء جميع الحقول', 'danger');
-        return;
-    }
-    
-    // التحقق من صحة البريد الإلكتروني
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showAlert(alertDiv, 'بريد إلكتروني غير صالح', 'danger');
-        return;
-    }
-    
-    try {
-        showAlert(alertDiv, 'جاري تسجيل الدخول...', 'info');
-        console.log("🔐 Attempting login for:", email);
-        
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-        console.log("✅ Login successful:", userCredential.user.email);
-        
-        showAlert(alertDiv, 'تم تسجيل الدخول بنجاح! جاري تحميل البيانات...', 'success');
-        
-        // إخفاء التنبيه بعد تأخير قصير
-        setTimeout(() => {
-            if (alertDiv) {
-                alertDiv.style.display = 'none';
-            }
-            
-            // تأخير إضافي لضمان تحميل البيانات
-            setTimeout(() => {
-                refreshAppState();
-            }, 1000);
-            
-        }, 2000);
-        
-    } catch (error) {
-        console.error("❌ Login error:", error.code, error.message);
-        const errorMessage = getAuthErrorMessage(error.code);
-        showAlert(alertDiv, errorMessage, 'danger');
-        
-        // إعادة تعيين الحقول في حالة الخطأ
-        document.getElementById('loginPassword').value = '';
-    }
-}
-
-async function registerUser() {
-    // الحصول على القيم من الحقول
-    const name = document.getElementById('registerName').value.trim();
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
-    const confirmPassword = document.getElementById('registerConfirmPassword').value;
-    const initialCapital = parseFloat(document.getElementById('initialCapital').value) || 1000;
-    const alertDiv = document.getElementById('registerAlert');
-    
-    // التحقق من الحقول
-    if (!name || !email || !password || !confirmPassword) {
-        showAlert(alertDiv, 'يرجى ملء جميع الحقول', 'danger');
-        return;
-    }
-    
-    if (name.length < 2) {
-        showAlert(alertDiv, 'الاسم يجب أن يكون على الأقل حرفين', 'danger');
-        return;
-    }
-    
-    // التحقق من صحة البريد الإلكتروني
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showAlert(alertDiv, 'بريد إلكتروني غير صالح', 'danger');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showAlert(alertDiv, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'danger');
-        return;
-    }
-    
-    if (password !== confirmPassword) {
-        showAlert(alertDiv, 'كلمات المرور غير متطابقة', 'danger');
-        return;
-    }
-    
-    if (isNaN(initialCapital) || initialCapital < 0) {
-        showAlert(alertDiv, 'رأس المال يجب أن يكون قيمة عددية موجبة', 'danger');
-        return;
-    }
-    
-    try {
-        showAlert(alertDiv, 'جاري إنشاء الحساب...', 'info');
-        console.log("🚀 Starting account creation...");
-        
-        // 1. إنشاء المستخدم في Authentication
-        console.log("1. Creating user in Firebase Auth...");
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-        console.log("✅ User created in Auth:", user.uid);
-        
-        // 2. حفظ بيانات المستخدم في Firestore
-        console.log("2. Saving user data to Firestore...");
-        const userData = {
-            name: name,
-            email: email,
-            initialCapital: initialCapital,
-            currentCapital: initialCapital,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-            totalTrades: 0,
-            totalProfit: 0,
-            totalLoss: 0,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        await db.collection('users').doc(user.uid).set(userData);
-        console.log("✅ User data saved to Firestore");
-        
-        showAlert(alertDiv, 'تم إنشاء الحساب بنجاح! يتم تسجيل الدخول تلقائياً...', 'success');
-        console.log("🎉 Account creation complete!");
-        
-        // إخفاء التنبيه بعد ثانيتين
-        setTimeout(() => {
-            alertDiv.style.display = 'none';
-        }, 2000);
-        
-    } catch (error) {
-        console.error("❌ Registration error:", error.code, error.message);
-        
-        // رسالة خطأ مفصلة
-        let errorMessage = getAuthErrorMessage(error.code);
-        
-        // إذا كان الخطأ بسبب أن البريد مستخدم بالفعل
-        if (error.code === 'auth/email-already-in-use') {
-            errorMessage = 'هذا البريد الإلكتروني مستخدم بالفعل. حاول تسجيل الدخول بدلاً من ذلك.';
-        }
-        
-        // إذا كان هناك مشكلة في الشبكة
-        if (error.code === 'auth/network-request-failed') {
-            errorMessage = 'خطأ في الاتصال بالإنترنت. تأكد من اتصالك بالشبكة وحاول مرة أخرى.';
-        }
-        
-        showAlert(alertDiv, errorMessage, 'danger');
-        
-        // إذا فشل إنشاء الحساب، حاول حذف المستخدم من Auth إذا تم إنشاؤه
-        if (auth.currentUser) {
-            try {
-                await auth.currentUser.delete();
-                console.log("🗑️ Deleted partially created user from Auth");
-            } catch (deleteError) {
-                console.log("ℹ️ Could not delete user from Auth:", deleteError.message);
-            }
-        }
-    }
-}
-
-async function logout() {
-    try {
-        resetAppState();
-        await auth.signOut();
-        console.log("✅ Logout successful");
-        showAuthSection();
-    } catch (error) {
-        console.error("❌ Logout error:", error);
-        showError('حدث خطأ أثناء تسجيل الخروج');
-    }
-}
-
-// ========== دوال المساعدة للمصادقة ==========
-function showAuthSection() {
-    document.getElementById('authSection').style.display = 'block';
-    document.getElementById('appContent').style.display = 'none';
-    document.getElementById('userInfo').style.display = 'none';
-    
-    // إعادة تعيين حقول التسجيل
-    document.getElementById('loginEmail').value = '';
-    document.getElementById('loginPassword').value = '';
-    
-    // إظهار تبويب تسجيل الدخول افتراضياً
-    showAuthForm('login');
-}
-
-function showAppContent() {
-    console.log("🔄 Switching to app content...");
-    
-    // إخفاء قسم المصادقة
-    const authSection = document.getElementById('authSection');
-    if (authSection) {
-        authSection.style.display = 'none';
-    }
-    
-    // إظهار المحتوى الرئيسي
-    const appContent = document.getElementById('appContent');
-    if (appContent) {
-        appContent.style.display = 'block';
-        
-        // تبديل إلى تبويب الصفقات تلقائياً
-        setTimeout(() => {
-            switchTab('trades');
-        }, 100);
-    }
-    
-    // إظهار معلومات المستخدم
-    const userInfo = document.getElementById('userInfo');
-    if (userInfo) {
-        userInfo.style.display = 'flex';
-    }
-    
-    console.log("✅ App content displayed");
-}
-
-function showAuthForm(formType) {
-    // تحديث التبويبات النشطة
-    document.querySelectorAll('.auth-tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    document.querySelector(`.auth-tab[data-form="${formType}"]`).classList.add('active');
-    
-    // إظهار النموذج المحدد
-    document.querySelectorAll('.auth-form').forEach(form => {
-        form.classList.remove('active');
-    });
-    document.getElementById(formType + 'Form').classList.add('active');
-    
-    // إخفاء أي تنبيهات
-    document.querySelectorAll('.alert').forEach(alert => {
-        alert.style.display = 'none';
-    });
-}
-
-function getAuthErrorMessage(errorCode) {
-    const messages = {
-        'auth/email-already-in-use': 'هذا البريد الإلكتروني مستخدم بالفعل',
-        'auth/invalid-email': 'بريد إلكتروني غير صالح',
-        'auth/operation-not-allowed': 'خدمة التسجيل غير مفعلة',
-        'auth/weak-password': 'كلمة المرور ضعيفة جداً، يجب أن تكون 6 أحرف على الأقل',
-        'auth/user-disabled': 'تم تعطيل هذا الحساب',
+function getAuthMessage(code) {
+    const map = {
+        'auth/email-already-in-use': 'البريد مستخدم بالفعل',
+        'auth/invalid-email': 'بريد غير صالح',
         'auth/user-not-found': 'المستخدم غير موجود',
-        'auth/wrong-password': 'كلمة المرور غير صحيحة',
-        'auth/too-many-requests': 'محاولات تسجيل دخول كثيرة، حاول لاحقاً',
-        'auth/network-request-failed': 'خطأ في الاتصال بالشبكة',
-        'auth/invalid-api-key': 'مفتاح API غير صالح',
-        'auth/app-not-authorized': 'التطبيق غير مصرح له بالوصول',
-        'auth/configuration-not-found': 'إعدادات Firebase غير صحيحة',
-        'auth/project-not-found': 'مشروع Firebase غير موجود',
-        'auth/unauthorized-domain': 'هذا المجال غير مصرح به',
-        'auth/internal-error': 'خطأ داخلي في الخادم'
+        'auth/wrong-password': 'كلمة مرور خاطئة',
+        'auth/weak-password': 'كلمة المرور ضعيفة',
+        'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
+        'auth/network-request-failed': 'خطأ في الشبكة'
     };
-    
-    return messages[errorCode] || `حدث خطأ غير معروف: ${errorCode}`;
+    return map[code] || 'حدث خطأ غير معروف';
 }
 
-// ========== تحميل بيانات المستخدم ==========
+function showAlert(el, msg, type) {
+    if (!el) return;
+    el.textContent = msg;
+    el.className = `alert alert-${type}`;
+    el.style.display = 'block';
+}
+
+// ================================================================
+// LOAD USER DATA
+// ================================================================
 async function loadUserData() {
     if (!currentUser) return;
-    
     try {
-        console.log("📥 Loading user data for:", currentUser.uid);
-        
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
-        
-        if (userDoc.exists) {
-            userData = userDoc.data();
-            console.log("✅ User data loaded:", userData);
-            
-            // تحديث آخر تسجيل دخول
-            await db.collection('users').doc(currentUser.uid).update({
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            
-            showAppContent();
-            
-            // تحديث واجهة المستخدم
-            updateUIAfterLogin();
-            
-            // جلب الصفقات
-            await loadUserTrades();
-            
-            // جلب الاستراتيجية
-            await loadUserStrategy();
-            
-            // تحديث الإحصائيات
-            updateStats();
-            
-            // تحديث الرسوم البيانية فقط إذا كان هناك بيانات
-            if (userTrades && userTrades.length > 0) {
-                updateCharts();
-            }
-            
-            // إجراء التحليل المتقدم
-            performAdvancedAnalysis();
-            
-        } else {
-            console.error("❌ User document not found in Firestore");
-            showError('بيانات المستخدم غير موجودة');
-        }
-        
-    } catch (error) {
-        console.error("❌ Error loading user data:", error);
-        showError('خطأ في تحميل بيانات المستخدم');
+        const doc = await db.collection('users').doc(currentUser.uid).get();
+        if (!doc.exists) return;
+        userData = doc.data();
+        $('userGreeting').textContent = `مرحباً، ${userData.name}`;
+        $('userCapital').textContent = `$${userData.currentCapital.toFixed(2)}`;
+        $('currentCapitalDisplay').textContent = `$${userData.currentCapital.toFixed(2)}`;
+        $('initialCapitalDisplay').textContent = `$${userData.initialCapital.toFixed(2)}`;
+
+        await loadTrades();
+        await loadStrategy();
+        updateStats();
+        updateTradesList();
+        updateCalendar();
+        updateCharts();
+        updateAnalysis();
+    } catch (err) {
+        console.error('Load user data error:', err);
     }
 }
 
-// ========== تحميل الصفقات ==========
-async function loadUserTrades() {
+// ================================================================
+// TRADES
+// ================================================================
+async function loadTrades() {
     if (!currentUser) return;
-    
     try {
-        console.log("📥 Loading user trades...");
-        
-        const snapshot = await db.collection('trades')
+        const snap = await db.collection('trades')
             .where('userId', '==', currentUser.uid)
             .orderBy('date', 'desc')
             .get();
-        
         userTrades = [];
-        snapshot.forEach(doc => {
-            const trade = doc.data();
-            trade.id = doc.id;
-            // تحويل التواريخ بشكل صحيح
-            if (trade.date && trade.date.toDate) {
-                trade.date = trade.date.toDate();
-            }
-            userTrades.push(trade);
+        snap.forEach(doc => {
+            const d = doc.data();
+            d.id = doc.id;
+            if (d.date?.toDate) d.date = d.date.toDate();
+            userTrades.push(d);
         });
-        
-        console.log(`✅ Loaded ${userTrades.length} trades`);
-        
-        // تحديث قائمة الصفقات
-        updateTradesList();
-        
-        // تحديث التقويم
-        updateCalendar();
-        
-        // تحديث الإحصائيات
-        updateStats();
-        
-    } catch (error) {
-        console.error("❌ Error loading trades:", error);
-        // إذا كان الخطأ بسبب عدم وجود فهرس، قم بتحميل بدون ترتيب
-        if (error.code === 'failed-precondition') {
-            console.log("⚠️ Index not ready, loading without order...");
-            await loadTradesWithoutOrder();
-        }
-    }
-}
-
-async function loadTradesWithoutOrder() {
-    try {
-        const snapshot = await db.collection('trades')
-            .where('userId', '==', currentUser.uid)
-            .get();
-        
+    } catch (err) {
+        // Fallback without index
+        const snap = await db.collection('trades').where('userId', '==', currentUser.uid).get();
         userTrades = [];
-        snapshot.forEach(doc => {
-            const trade = doc.data();
-            trade.id = doc.id;
-            // تحويل التواريخ بشكل صحيح
-            if (trade.date && trade.date.toDate) {
-                trade.date = trade.date.toDate();
-            }
-            userTrades.push(trade);
+        snap.forEach(doc => {
+            const d = doc.data();
+            d.id = doc.id;
+            if (d.date?.toDate) d.date = d.date.toDate();
+            userTrades.push(d);
         });
-        
-        // ترتيب يدوي حسب التاريخ
-        userTrades.sort((a, b) => {
-            const dateA = a.date ? (a.date.toDate ? a.date.toDate() : new Date(a.date)) : new Date(0);
-            const dateB = b.date ? (b.date.toDate ? b.date.toDate() : new Date(b.date)) : new Date(0);
-            return dateB - dateA;
-        });
-        
-        updateTradesList();
-        updateStats();
-    } catch (error) {
-        console.error("❌ Error loading trades without order:", error);
+        userTrades.sort((a, b) => (b.date || 0) - (a.date || 0));
     }
 }
 
-// ========== تحميل الاستراتيجية ==========
-async function loadUserStrategy() {
-    if (!currentUser) return;
-    
+// Add Trade
+$('tradeForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser || !userData) return alert('يجب تسجيل الدخول');
+
+    const asset = $('asset').value;
+    const other = $('otherAsset').value.trim();
+    const selectedAsset = asset === 'other' ? other : asset;
+    const tradeType = $('tradeType').value;
+    const amount = parseFloat($('amount').value);
+    const result = $('result').value;
+    const profitLoss = parseFloat($('profitLoss').value);
+    const session = $('session').value;
+    const notes = $('notes').value;
+    const date = $('tradeDate').value;
+    const imageFile = $('tradeImage').files[0];
+
+    if (!selectedAsset || !tradeType || !amount || !result || isNaN(profitLoss) || !session || !date) {
+        return alert('يرجى ملء جميع الحقول المطلوبة');
+    }
+    if (amount <= 0) return alert('اللوت يجب أن يكون أكبر من 0');
+    if (asset === 'other' && !other) return alert('يرجى إدخال اسم الأصل');
+
     try {
-        const doc = await db.collection('strategies').doc(currentUser.uid).get();
-        
-        if (doc.exists) {
-            userStrategy = doc.data();
-            displayStrategyPreview();
-        }
-    } catch (error) {
-        console.error("❌ Error loading strategy:", error);
-    }
-}
-
-// ========== دوال تعديل الصفقات ==========
-window.editTrade = async function(tradeId) {
-    if (!currentUser) return;
-    
-    try {
-        console.log("✏️ Editing trade:", tradeId);
-        
-        // جلب بيانات الصفقة من Firestore
-        const tradeDoc = await db.collection('trades').doc(tradeId).get();
-        
-        if (!tradeDoc.exists) {
-            showError('الصفقة غير موجودة');
-            return;
-        }
-        
-        const trade = tradeDoc.data();
-        editingTradeId = tradeId;
-        originalTradeData = trade;
-        
-        // تعبئة النموذج ببيانات الصفقة
-        document.getElementById('editTradeId').value = tradeId;
-        document.getElementById('editOriginalProfitLoss').value = trade.profitLoss || 0;
-        
-        // الأصل
-        const assetSelect = document.getElementById('editAsset');
-        const otherAssetInput = document.getElementById('editOtherAsset');
-        const commonAssets = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'XAU/USD', 'BTC/USD', 'ETH/USD'];
-        
-        if (commonAssets.includes(trade.asset)) {
-            assetSelect.value = trade.asset;
-            otherAssetInput.style.display = 'none';
-        } else {
-            assetSelect.value = 'other';
-            otherAssetInput.style.display = 'block';
-            otherAssetInput.value = trade.asset;
-        }
-        
-        document.getElementById('editTradeType').value = trade.tradeType;
-        document.getElementById('editAmount').value = trade.amount;
-        document.getElementById('editResult').value = trade.result;
-        document.getElementById('editProfitLoss').value = trade.profitLoss;
-        document.getElementById('editSession').value = trade.session;
-        document.getElementById('editNotes').value = trade.notes || '';
-        
-        // التاريخ
-        let tradeDate;
-        if (trade.date && trade.date.toDate) {
-            tradeDate = trade.date.toDate();
-        } else if (trade.date) {
-            tradeDate = new Date(trade.date);
-        } else {
-            tradeDate = new Date();
-        }
-        
-        const year = tradeDate.getFullYear();
-        const month = String(tradeDate.getMonth() + 1).padStart(2, '0');
-        const day = String(tradeDate.getDate()).padStart(2, '0');
-        const hours = String(tradeDate.getHours()).padStart(2, '0');
-        const minutes = String(tradeDate.getMinutes()).padStart(2, '0');
-        
-        document.getElementById('editTradeDate').value = `${year}-${month}-${day}T${hours}:${minutes}`;
-        
-        // الصورة
-        const preview = document.getElementById('editImagePreview');
-        const removeBtn = document.getElementById('editRemoveImageBtn');
-        
-        if (trade.imageUrl) {
-            preview.src = trade.imageUrl;
-            preview.style.display = 'block';
-            removeBtn.style.display = 'inline-block';
-        } else {
-            preview.src = '';
-            preview.style.display = 'none';
-            removeBtn.style.display = 'none';
-        }
-        
-        // إظهار الـ modal
-        document.getElementById('editTradeModal').style.display = 'block';
-        
-    } catch (error) {
-        console.error("❌ Error loading trade for edit:", error);
-        showError('حدث خطأ أثناء تحميل بيانات الصفقة');
-    }
-};
-
-async function updateTrade() {
-    const tradeId = document.getElementById('editTradeId').value;
-    const originalProfitLoss = parseFloat(document.getElementById('editOriginalProfitLoss').value) || 0;
-    
-    if (!tradeId || !currentUser || !userData) {
-        showError('بيانات غير صحيحة');
-        return;
-    }
-    
-    const asset = document.getElementById('editAsset').value;
-    const otherAsset = document.getElementById('editOtherAsset').value;
-    const selectedAsset = asset === 'other' ? otherAsset : asset;
-    
-    const tradeType = document.getElementById('editTradeType').value;
-    const amount = parseFloat(document.getElementById('editAmount').value);
-    const result = document.getElementById('editResult').value;
-    const profitLoss = parseFloat(document.getElementById('editProfitLoss').value);
-    const session = document.getElementById('editSession').value;
-    const notes = document.getElementById('editNotes').value;
-    const tradeDate = document.getElementById('editTradeDate').value;
-    const imageFile = document.getElementById('editTradeImage').files[0];
-    
-    // التحقق من الحقول المطلوبة
-    if (!selectedAsset || !tradeType || !amount || !result || isNaN(profitLoss) || !session || !tradeDate) {
-        showError('يرجى ملء جميع الحقول المطلوبة');
-        return;
-    }
-    
-    if (amount <= 0) {
-        showError('المبلغ يجب أن يكون أكبر من الصفر');
-        return;
-    }
-    
-    if (asset === 'other' && !otherAsset) {
-        showError('يرجى إدخال اسم الأصل');
-        return;
-    }
-    
-    try {
-        console.log("🔄 Updating trade:", tradeId);
-        
-        // رفع الصورة إذا كانت موجودة
-        let imageUrl = originalTradeData.imageUrl || '';
-        if (imageFile) {
-            const storageRef = storage.ref(`trades/${currentUser.uid}/${Date.now()}_${imageFile.name}`);
-            const snapshot = await storageRef.put(imageFile);
-            imageUrl = await snapshot.ref.getDownloadURL();
-            console.log("✅ New image uploaded:", imageUrl);
-        }
-        
-        // حساب الفرق في الربح/الخسارة
-        const profitLossDiff = profitLoss - originalProfitLoss;
-        
-        // تحديث بيانات الصفقة
-        const updatedTradeData = {
-            asset: selectedAsset,
-            tradeType: tradeType,
-            amount: amount,
-            result: result,
-            profitLoss: profitLoss,
-            session: session,
-            notes: notes,
-            imageUrl: imageUrl,
-            date: firebase.firestore.Timestamp.fromDate(new Date(tradeDate)),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        await db.collection('trades').doc(tradeId).update(updatedTradeData);
-        console.log("✅ Trade updated:", tradeId);
-        
-        // تحديث رأس المال
-        const newCapital = userData.currentCapital + profitLossDiff;
-        
-        // تحديث إحصائيات المستخدم
-        let updateData = {
-            currentCapital: newCapital,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        // تحديث إجمالي الأرباح والخسائر
-        if (originalTradeData.result === 'ربح' && result === 'ربح') {
-            updateData.totalProfit = (userData.totalProfit || 0) + profitLossDiff;
-        } else if (originalTradeData.result === 'ربح' && result === 'خسارة') {
-            updateData.totalProfit = (userData.totalProfit || 0) - originalProfitLoss;
-            updateData.totalLoss = (userData.totalLoss || 0) + Math.abs(profitLoss);
-        } else if (originalTradeData.result === 'خسارة' && result === 'ربح') {
-            updateData.totalLoss = (userData.totalLoss || 0) - Math.abs(originalProfitLoss);
-            updateData.totalProfit = (userData.totalProfit || 0) + profitLoss;
-        } else if (originalTradeData.result === 'خسارة' && result === 'خسارة') {
-            updateData.totalLoss = (userData.totalLoss || 0) + (Math.abs(profitLoss) - Math.abs(originalProfitLoss));
-        }
-        
-        await db.collection('users').doc(currentUser.uid).update(updateData);
-        console.log("✅ User data updated");
-        
-        // إغلاق الـ modal
-        document.getElementById('editTradeModal').style.display = 'none';
-        
-        // إعادة تعيين النموذج
-        document.getElementById('editTradeForm').reset();
-        document.getElementById('editImagePreview').style.display = 'none';
-        document.getElementById('editRemoveImageBtn').style.display = 'none';
-        
-        // إظهار رسالة النجاح
-        showSuccess('تم تحديث الصفقة بنجاح!');
-        
-        // إعادة تحميل البيانات
-        await loadUserData();
-        
-    } catch (error) {
-        console.error("❌ Error updating trade:", error);
-        showError('حدث خطأ أثناء تحديث الصفقة: ' + error.message);
-    }
-}
-
-// ========== دوال معاينة الصور للنموذج ==========
-function previewEditImage() {
-    const imageFile = document.getElementById('editTradeImage').files[0];
-    const preview = document.getElementById('editImagePreview');
-    const removeBtn = document.getElementById('editRemoveImageBtn');
-    
-    if (imageFile && preview) {
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-            
-            if (removeBtn) {
-                removeBtn.style.display = 'inline-block';
-            }
-        }
-        
-        reader.readAsDataURL(imageFile);
-    }
-}
-
-function removeEditImagePreview() {
-    const preview = document.getElementById('editImagePreview');
-    const removeBtn = document.getElementById('editRemoveImageBtn');
-    const imageInput = document.getElementById('editTradeImage');
-    
-    if (preview) {
-        preview.src = '';
-        preview.style.display = 'none';
-    }
-    
-    if (removeBtn) {
-        removeBtn.style.display = 'none';
-    }
-    
-    if (imageInput) {
-        imageInput.value = '';
-    }
-}
-
-// ========== لوحة المتصدرين ==========
-async function loadLeaderboard() {
-    try {
-        const leaderboardList = document.getElementById('leaderboardList');
-        leaderboardList.innerHTML = '<div class="loading-spinner"></div>';
-        
-        // جلب جميع المستخدمين
-        const usersSnapshot = await db.collection('users').get();
-        const users = [];
-        
-        usersSnapshot.forEach(doc => {
-            users.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-        
-        // جلب جميع الصفقات
-        const tradesSnapshot = await db.collection('trades').get();
-        const allTrades = [];
-        
-        tradesSnapshot.forEach(doc => {
-            allTrades.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-        
-        // تجميع الصفقات لكل مستخدم
-        const tradesByUser = {};
-        allTrades.forEach(trade => {
-            if (!tradesByUser[trade.userId]) {
-                tradesByUser[trade.userId] = [];
-            }
-            tradesByUser[trade.userId].push(trade);
-        });
-        
-        // حساب الإحصائيات لكل مستخدم
-        allTradersData = [];
-        let totalAllTrades = 0;
-        let totalWinRateSum = 0;
-        let highestProfit = 0;
-        let activeTraders = 0;
-        
-        users.forEach(user => {
-            const userTrades = tradesByUser[user.id] || [];
-            const stats = calculateUserStats(userTrades, user);
-            
-            if (userTrades.length > 0) {
-                totalAllTrades += userTrades.length;
-                totalWinRateSum += stats.successRate;
-                highestProfit = Math.max(highestProfit, stats.totalPnL);
-                activeTraders++;
-                
-                allTradersData.push({
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    initialCapital: user.initialCapital || 0,
-                    currentCapital: user.currentCapital || user.initialCapital || 0,
-                    tradesCount: userTrades.length,
-                    ...stats
-                });
-            }
-        });
-        
-        // تطبيق الفلاتر
-        let filteredData = [...allTradersData];
-        
-        // فلترة حسب الحد الأدنى للصفقات
-        const minTrades = parseInt(document.getElementById('minTrades').value) || 0;
-        filteredData = filteredData.filter(trader => trader.tradesCount >= minTrades);
-        
-        // فلترة حسب الفترة الزمنية
-        const timePeriod = document.getElementById('timePeriod').value;
-        if (timePeriod === 'today') {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            filteredData = filteredData.filter(trader => {
-                return true;
-            });
-        } else if (timePeriod === 'week') {
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-        } else if (timePeriod === 'month') {
-            const monthAgo = new Date();
-            monthAgo.setMonth(monthAgo.getMonth() - 1);
-        }
-        
-        // ترتيب حسب نوع التصنيف
-        const leaderboardType = document.getElementById('leaderboardType').value;
-        filteredData.sort((a, b) => {
-            switch (leaderboardType) {
-                case 'winRate':
-                    return b.successRate - a.successRate;
-                case 'totalProfit':
-                    return b.totalProfit - a.totalProfit;
-                case 'roi':
-                    return b.returnPercentage - a.returnPercentage;
-                case 'consistency':
-                    const aConsistency = a.totalProfit / (a.tradesCount || 1);
-                    const bConsistency = b.totalProfit / (b.tradesCount || 1);
-                    return bConsistency - aConsistency;
-                case 'totalTrades':
-                    return b.tradesCount - a.tradesCount;
-                default:
-                    return b.successRate - a.successRate;
-            }
-        });
-        
-        // تحديث الإحصائيات العامة
-        document.getElementById('totalTraders').textContent = activeTraders;
-        document.getElementById('totalAllTrades').textContent = totalAllTrades;
-        document.getElementById('avgWinRate').textContent = activeTraders > 0 ? 
-            (totalWinRateSum / activeTraders).toFixed(1) + '%' : '0%';
-        document.getElementById('highestProfit').textContent = '$' + highestProfit.toFixed(2);
-        
-        // تحديث لوحة المتصدرين
-        updateLeaderboardUI(filteredData);
-        
-        // تحديث تصنيف المستخدم الحالي
-        updateUserRank(filteredData);
-        
-        // تحديث الإنجازات
-        updateAchievements();
-        
-    } catch (error) {
-        console.error("❌ Error loading leaderboard:", error);
-        document.getElementById('leaderboardList').innerHTML = 
-            '<div class="no-data">حدث خطأ في تحميل بيانات المتصدرين</div>';
-    }
-}
-
-function calculateUserStats(trades, user) {
-    const stats = {
-        totalTrades: trades.length,
-        winningTrades: 0,
-        losingTrades: 0,
-        totalPnL: 0,
-        totalProfit: 0,
-        totalLoss: 0,
-        successRate: 0,
-        averageProfit: 0,
-        averageLoss: 0,
-        returnPercentage: 0
-    };
-    
-    trades.forEach(trade => {
-        const profitLoss = parseFloat(trade.profitLoss) || 0;
-        stats.totalPnL += profitLoss;
-        
-        if (trade.result === 'ربح') {
-            stats.winningTrades++;
-            stats.totalProfit += Math.abs(profitLoss);
-        } else if (trade.result === 'خسارة') {
-            stats.losingTrades++;
-            stats.totalLoss += Math.abs(profitLoss);
-        }
-    });
-    
-    // حساب الإحصائيات الإضافية
-    stats.successRate = stats.totalTrades > 0 ? 
-        (stats.winningTrades / stats.totalTrades) * 100 : 0;
-    
-    stats.averageProfit = stats.winningTrades > 0 ? 
-        stats.totalProfit / stats.winningTrades : 0;
-    
-    stats.averageLoss = stats.losingTrades > 0 ? 
-        stats.totalLoss / stats.losingTrades : 0;
-    
-    const initialCapital = user.initialCapital || 1000;
-    stats.returnPercentage = initialCapital > 0 ? 
-        (stats.totalPnL / initialCapital) * 100 : 0;
-    
-    return stats;
-}
-
-function updateLeaderboardUI(tradersData) {
-    const leaderboardList = document.getElementById('leaderboardList');
-    
-    if (!tradersData || tradersData.length === 0) {
-        leaderboardList.innerHTML = '<div class="no-data">لا توجد بيانات متاحة للعرض</div>';
-        return;
-    }
-    
-    let html = '';
-    tradersData.forEach((trader, index) => {
-        const isCurrentUser = currentUser && trader.id === currentUser.uid;
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-        let rowClass = '';
-        
-        if (index < 3) rowClass = 'top-three';
-        if (isCurrentUser) rowClass += ' current-user';
-        
-        html += `
-            <div class="leaderboard-item ${rowClass}">
-                <div class="rank-col">${index + 1} ${medal}</div>
-                <div class="name-col">
-                    ${trader.name}
-                    ${isCurrentUser ? '<span style="color: #667eea; font-size: 0.8em;">(أنت)</span>' : ''}
-                </div>
-                <div class="stats-col">${trader.tradesCount}</div>
-                <div class="stats-col">${trader.successRate.toFixed(1)}%</div>
-                <div class="stats-col">$${trader.totalProfit.toFixed(2)}</div>
-                <div class="stats-col">${trader.returnPercentage.toFixed(1)}%</div>
-            </div>
-        `;
-    });
-    
-    leaderboardList.innerHTML = html;
-}
-
-function updateUserRank(tradersData) {
-    if (!currentUser || !userData) return;
-    
-    const userIndex = tradersData.findIndex(trader => trader.id === currentUser.uid);
-    
-    if (userIndex !== -1) {
-        const userRank = userIndex + 1;
-        const userData = tradersData[userIndex];
-        
-        document.getElementById('userRank').textContent = `#${userRank}`;
-        document.getElementById('userRankDetails').innerHTML = `
-            <div>عدد الصفقات: ${userData.tradesCount}</div>
-            <div>نسبة الفوز: ${userData.successRate.toFixed(1)}%</div>
-            <div>إجمالي الأرباح: $${userData.totalProfit.toFixed(2)}</div>
-        `;
-    } else {
-        document.getElementById('userRank').textContent = 'غير مصنف';
-        document.getElementById('userRankDetails').textContent = 'ابدأ بالتداول للظهور في التصنيف';
-    }
-}
-
-function updateAchievements() {
-    if (!userData || !userTrades) return;
-    
-    const achievementsGrid = document.getElementById('achievementsGrid');
-    const stats = calculateStats(userTrades);
-    
-    const achievements = [
-        {
-            id: 'beginner',
-            title: 'المتداول المبتدئ',
-            description: 'إكمال 10 صفقات',
-            icon: 'fas fa-rocket',
-            condition: userTrades.length >= 10,
-            progress: Math.min((userTrades.length / 10) * 100, 100),
-            current: userTrades.length,
-            target: 10
-        },
-        {
-            id: 'profit_master',
-            title: 'محترف الربح',
-            description: 'تحقيق $1000 ربح',
-            icon: 'fas fa-chart-line',
-            condition: stats.totalProfit >= 1000,
-            progress: Math.min((stats.totalProfit / 1000) * 100, 100),
-            current: `$${stats.totalProfit.toFixed(2)}`,
-            target: '$1000'
-        },
-        {
-            id: 'risk_manager',
-            title: 'مدير المخاطر',
-            description: 'نسبة فوز 70% أو أكثر',
-            icon: 'fas fa-shield-alt',
-            condition: stats.successRate >= 70,
-            progress: Math.min(stats.successRate, 100),
-            current: `${stats.successRate.toFixed(1)}%`,
-            target: '70%'
-        },
-        {
-            id: 'consistency',
-            title: 'المتداول المنتظم',
-            description: '30 صفقة على الأقل',
-            icon: 'fas fa-calendar-check',
-            condition: userTrades.length >= 30,
-            progress: Math.min((userTrades.length / 30) * 100, 100),
-            current: userTrades.length,
-            target: 30
-        },
-        {
-            id: 'capital_growth',
-            title: 'نمو رأس المال',
-            description: 'زيادة رأس المال بنسبة 50%',
-            icon: 'fas fa-money-bill-wave',
-            condition: stats.returnPercentage >= 50,
-            progress: Math.min(stats.returnPercentage, 100),
-            current: `${stats.returnPercentage.toFixed(1)}%`,
-            target: '50%'
-        },
-        {
-            id: 'streak',
-            title: 'سلسلة النجاح',
-            description: '5 صفقات رابحة متتالية',
-            icon: 'fas fa-fire',
-            condition: checkWinningStreak(userTrades) >= 5,
-            progress: Math.min((checkWinningStreak(userTrades) / 5) * 100, 100),
-            current: checkWinningStreak(userTrades),
-            target: 5
-        }
-    ];
-    
-    let html = '';
-    achievements.forEach(achievement => {
-        const isUnlocked = achievement.condition;
-        
-        html += `
-            <div class="achievement-card ${isUnlocked ? 'unlocked' : 'locked'}">
-                <div class="achievement-icon">
-                    <i class="${achievement.icon}"></i>
-                </div>
-                <div class="achievement-info">
-                    <h4>${achievement.title}</h4>
-                    <p>${achievement.description}</p>
-                    <div class="progress-bar">
-                        <div class="progress" style="width: ${achievement.progress}%"></div>
-                    </div>
-                    <span class="progress-text">${achievement.current}/${achievement.target}</span>
-                </div>
-            </div>
-        `;
-    });
-    
-    achievementsGrid.innerHTML = html;
-}
-
-function checkWinningStreak(trades) {
-    let currentStreak = 0;
-    let maxStreak = 0;
-    
-    // فرز الصفقات من الأحدث إلى الأقدم
-    const sortedTrades = [...trades].sort((a, b) => {
-        const dateA = a.date ? (a.date.toDate ? a.date.toDate() : new Date(a.date)) : new Date(0);
-        const dateB = b.date ? (b.date.toDate ? b.date.toDate() : new Date(b.date)) : new Date(0);
-        return dateB - dateA;
-    });
-    
-    for (const trade of sortedTrades) {
-        if (trade.result === 'ربح') {
-            currentStreak++;
-            maxStreak = Math.max(maxStreak, currentStreak);
-        } else {
-            break;
-        }
-    }
-    
-    return maxStreak;
-}
-
-// ========== دالة تبديل التبويبات ==========
-function switchTab(tabId) {
-    // تحديث التبويبات النشطة
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
-    
-    // إظهار المحتوى المحدد
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    const tabContent = document.getElementById(tabId + '-tab');
-    if (tabContent) {
-        tabContent.classList.add('active');
-        
-        // تحميل البيانات عند التبديل إلى تبويب معين
-        if (tabId === 'leaderboard') {
-            loadLeaderboard();
-        } else if (tabId === 'charts') {
-            // تأخير تحديث الرسوم البيانية للتأكد من عرض العنصر
-            setTimeout(() => {
-                updateCharts();
-            }, 100);
-        } else if (tabId === 'calendar') {
-            updateCalendar();
-        } else if (tabId === 'performance') {
-            setTimeout(() => {
-                updatePerformanceCharts();
-            }, 100);
-        } else if (tabId === 'analysis') {
-            setTimeout(() => {
-                updateAnalysisContent();
-            }, 100);
-        }
-    }
-}
-
-// ========== دوال التطبيق الأساسية ==========
-function initializeDates() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    
-    const dateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-    
-    const tradeDateInput = document.getElementById('tradeDate');
-    if (tradeDateInput) {
-        tradeDateInput.value = dateTimeLocal;
-    }
-}
-
-function showAlert(element, message, type) {
-    if (!element) return;
-    
-    element.textContent = message;
-    element.className = `alert alert-${type}`;
-    element.style.display = 'block';
-    
-    // تمرير للأسفل لمشاهدة التنبيه
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function showError(message) {
-    // إنشاء تنبيه مؤقت
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-danger';
-    alertDiv.textContent = message;
-    alertDiv.style.position = 'fixed';
-    alertDiv.style.top = '20px';
-    alertDiv.style.right = '20px';
-    alertDiv.style.zIndex = '10000';
-    alertDiv.style.maxWidth = '300px';
-    
-    document.body.appendChild(alertDiv);
-    
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
-}
-
-function showSuccess(message) {
-    // إنشاء تنبيه مؤقت
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-success';
-    alertDiv.textContent = message;
-    alertDiv.style.position = 'fixed';
-    alertDiv.style.top = '20px';
-    alertDiv.style.right = '20px';
-    alertDiv.style.zIndex = '10000';
-    alertDiv.style.maxWidth = '300px';
-    
-    document.body.appendChild(alertDiv);
-    
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 3000);
-}
-
-// ========== دوال عامة للوصول من HTML ==========
-window.showImageModal = function(imageUrl) {
-    const modalImage = document.getElementById('modalImage');
-    const imageModal = document.getElementById('imageModal');
-    
-    if (modalImage && imageModal) {
-        modalImage.src = imageUrl;
-        imageModal.style.display = 'block';
-    }
-};
-
-window.showFullNotes = function(notes) {
-    const notesContent = document.getElementById('notesContent');
-    const notesModal = document.getElementById('notesModal');
-    
-    if (notesContent && notesModal) {
-        notesContent.textContent = notes;
-        notesModal.style.display = 'block';
-    }
-};
-
-window.deleteTrade = async function(tradeId) {
-    if (!currentUser) return;
-    
-    if (!confirm('هل أنت متأكد من حذف هذه الصفقة؟ لا يمكن التراجع عن هذا الإجراء.')) {
-        return;
-    }
-    
-    try {
-        // جلب بيانات الصفقة لحساب رأس المال
-        const tradeDoc = await db.collection('trades').doc(tradeId).get();
-        if (tradeDoc.exists) {
-            const trade = tradeDoc.data();
-            const profitLoss = parseFloat(trade.profitLoss) || 0;
-            
-            // إعادة ضبط رأس المال
-            const newCapital = userData.currentCapital - profitLoss;
-            
-            // تحديث إحصائيات المستخدم
-            let updateData = {
-                currentCapital: newCapital,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            if (trade.result === 'ربح') {
-                updateData.totalProfit = (userData.totalProfit || 0) - profitLoss;
-            } else if (trade.result === 'خسارة') {
-                updateData.totalLoss = (userData.totalLoss || 0) - Math.abs(profitLoss);
-            }
-            
-            updateData.totalTrades = (userData.totalTrades || 0) - 1;
-            
-            await db.collection('users').doc(currentUser.uid).update(updateData);
-        }
-        
-        await db.collection('trades').doc(tradeId).delete();
-        showSuccess('تم حذف الصفقة بنجاح!');
-        
-        // إعادة تحميل الصفقات
-        await loadUserTrades();
-        
-    } catch (error) {
-        console.error("❌ Error deleting trade:", error);
-        showError('حدث خطأ أثناء حذف الصفقة');
-    }
-};
-
-window.showDayTrades = function(dateStr) {
-    const dayTrades = userTrades.filter(trade => {
-        if (!trade.date) return false;
-        let tradeDate;
-        if (trade.date.toDate) {
-            tradeDate = trade.date.toDate();
-        } else {
-            tradeDate = new Date(trade.date);
-        }
-        const tradeDateStr = tradeDate.toISOString().split('T')[0];
-        return tradeDateStr === dateStr;
-    });
-    
-    const selectedDay = document.getElementById('selected-day');
-    const dayTradesList = document.getElementById('day-trades-list');
-    
-    if (!selectedDay || !dayTradesList) return;
-    
-    const date = new Date(dateStr);
-    const formattedDate = date.toLocaleDateString('ar-SA', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-    
-    selectedDay.textContent = `تفاصيل الصفقات ليوم ${formattedDate}`;
-    
-    if (dayTrades.length === 0) {
-        dayTradesList.innerHTML = '<p class="no-data">لا توجد صفقات في هذا اليوم.</p>';
-    } else {
-        let html = '';
-        let dayProfit = 0;
-        
-        dayTrades.forEach(trade => {
-            const profitClass = trade.result === 'ربح' ? 'positive' : 'negative';
-            const profitSign = trade.result === 'ربح' ? '+' : '-';
-            const amount = parseFloat(trade.amount) || 0;
-            const profitLoss = parseFloat(trade.profitLoss) || 0;
-            dayProfit += profitLoss;
-            
-            // تنسيق الوقت
-            let timeStr = '';
-            if (trade.date) {
-                let tradeDate;
-                if (trade.date.toDate) {
-                    tradeDate = trade.date.toDate();
-                } else {
-                    tradeDate = new Date(trade.date);
-                }
-                timeStr = tradeDate.toLocaleTimeString('ar-SA', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-            }
-            
-            html += `
-                <div class="transaction-item" style="margin-bottom: 10px;">
-                    <div class="transaction-header">
-                        <div class="transaction-type ${trade.tradeType === 'شراء' ? 'buy' : 'sell'}">
-                            ${trade.tradeType === 'شراء' ? 'شراء' : 'بيع'} ${trade.asset}
-                            <span style="font-size: 0.8em; color: #666; margin-right: 10px;">${timeStr}</span>
-                        </div>
-                    </div>
-                    <div class="transaction-details">
-                        <div class="detail">
-                            <span class="label">الجلسة:</span>
-                            <span class="value">${trade.session}</span>
-                        </div>
-                        <div class="detail">
-                            <span class="label">لوت:</span>
-                            <span class="value">$${amount.toFixed(2)}</span>
-                        </div>
-                        <div class="detail">
-                            <span class="label">النتيجة:</span>
-                            <span class="value ${profitClass}">
-                                ${trade.result} (${profitSign}$${Math.abs(profitLoss).toFixed(2)})
-                            </span>
-                        </div>
-                    </div>
-                    ${trade.notes ? `
-                        <div class="transaction-notes">
-                            <p>${trade.notes}</p>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        });
-        
-        // إضافة ملخص اليوم
-        const summaryHTML = `
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <h4>ملخص اليوم</h4>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <div>
-                        <strong>عدد الصفقات:</strong><br>
-                        ${dayTrades.length}
-                    </div>
-                    <div>
-                        <strong>صافي الربح/الخسارة:</strong><br>
-                        <span class="${dayProfit >= 0 ? 'positive' : 'negative'}">
-                            ${dayProfit >= 0 ? '+' : ''}${dayProfit.toFixed(2)}$
-                        </span>
-                    </div>
-                    <div>
-                        <strong>نسبة النجاح:</strong><br>
-                        ${((dayTrades.filter(t => t.result === 'ربح').length / dayTrades.length) * 100 || 0).toFixed(1)}%
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        dayTradesList.innerHTML = summaryHTML + html;
-    }
-    
-    // إظهار قسم التفاصيل
-    const dayDetails = document.getElementById('day-details');
-    if (dayDetails) {
-        dayDetails.style.display = 'block';
-    }
-};
-
-// ========== دوال إضافية تحتاجها ==========
-function calculateStats(trades) {
-    const stats = {
-        totalTrades: trades.length,
-        winningTrades: 0,
-        losingTrades: 0,
-        totalProfit: 0,
-        totalLoss: 0,
-        successRate: 0,
-        returnPercentage: 0
-    };
-    
-    trades.forEach(trade => {
-        const profitLoss = parseFloat(trade.profitLoss) || 0;
-        
-        if (trade.result === 'ربح') {
-            stats.winningTrades++;
-            stats.totalProfit += Math.abs(profitLoss);
-        } else if (trade.result === 'خسارة') {
-            stats.losingTrades++;
-            stats.totalLoss += Math.abs(profitLoss);
-        }
-    });
-    
-    stats.successRate = stats.totalTrades > 0 ? 
-        (stats.winningTrades / stats.totalTrades) * 100 : 0;
-    
-    const initialCapital = userData ? userData.initialCapital : 1000;
-    const totalPnL = stats.totalProfit - stats.totalLoss;
-    stats.returnPercentage = initialCapital > 0 ? 
-        (totalPnL / initialCapital) * 100 : 0;
-    
-    return stats;
-}
-
-// ========== إضافة صفقة جديدة ==========
-async function addTrade() {
-    if (!currentUser || !userData) {
-        showError('يجب تسجيل الدخول أولاً');
-        return;
-    }
-    
-    const asset = document.getElementById('asset').value;
-    const otherAsset = document.getElementById('otherAsset').value;
-    const selectedAsset = asset === 'other' ? otherAsset : asset;
-    
-    const tradeType = document.getElementById('tradeType').value;
-    const amount = parseFloat(document.getElementById('amount').value);
-    const result = document.getElementById('result').value;
-    const profitLoss = parseFloat(document.getElementById('profitLoss').value);
-    const session = document.getElementById('session').value;
-    const notes = document.getElementById('notes').value;
-    const tradeDate = document.getElementById('tradeDate').value;
-    const imageFile = document.getElementById('tradeImage').files[0];
-    
-    // التحقق من الحقول المطلوبة
-    if (!selectedAsset || !tradeType || !amount || !result || isNaN(profitLoss) || !session || !tradeDate) {
-        showError('يرجى ملء جميع الحقول المطلوبة');
-        return;
-    }
-    
-    if (amount <= 0) {
-        showError('المبلغ يجب أن يكون أكبر من الصفر');
-        return;
-    }
-    
-    if (asset === 'other' && !otherAsset) {
-        showError('يرجى إدخال اسم الأصل');
-        return;
-    }
-    
-    try {
-        console.log("➕ Adding new trade...");
-        
-        // رفع الصورة إذا كانت موجودة
         let imageUrl = '';
         if (imageFile) {
-            const storageRef = storage.ref(`trades/${currentUser.uid}/${Date.now()}_${imageFile.name}`);
-            const snapshot = await storageRef.put(imageFile);
-            imageUrl = await snapshot.ref.getDownloadURL();
-            console.log("✅ Image uploaded:", imageUrl);
+            const ref = storage.ref(`trades/${currentUser.uid}/${Date.now()}_${imageFile.name}`);
+            const snap = await ref.put(imageFile);
+            imageUrl = await snap.ref.getDownloadURL();
         }
-        
-        // إنشاء كائن الصفقة
-        const tradeData = {
+
+        await db.collection('trades').add({
             userId: currentUser.uid,
             userName: userData.name,
             asset: selectedAsset,
-            tradeType: tradeType,
-            amount: amount,
-            result: result,
-            profitLoss: profitLoss,
-            session: session,
-            notes: notes,
-            imageUrl: imageUrl,
-            date: firebase.firestore.Timestamp.fromDate(new Date(tradeDate)),
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        // إضافة الصفقة إلى Firestore
-        const docRef = await db.collection('trades').add(tradeData);
-        console.log("✅ Trade added with ID:", docRef.id);
-        
-        // تحديث رأس المال بناءً على نتيجة الصفقة
+            tradeType,
+            amount,
+            result,
+            profitLoss,
+            session,
+            notes,
+            imageUrl,
+            date: firebase.firestore.Timestamp.fromDate(new Date(date)),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
         const newCapital = userData.currentCapital + profitLoss;
-        
-        // تحديث إحصائيات المستخدم
-        const updateData = {
-            currentCapital: newCapital,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        if (result === 'ربح') {
-            updateData.totalProfit = (userData.totalProfit || 0) + profitLoss;
-        } else if (result === 'خسارة') {
-            updateData.totalLoss = (userData.totalLoss || 0) + Math.abs(profitLoss);
-        }
-        
-        updateData.totalTrades = (userData.totalTrades || 0) + 1;
-        
-        await db.collection('users').doc(currentUser.uid).update(updateData);
-        console.log("✅ User data updated");
-        
-        // إعادة تعيين النموذج
-        document.getElementById('tradeForm').reset();
-        removeImagePreview();
-        
-        // إظهار رسالة النجاح
-        showSuccess('تم إضافة الصفقة بنجاح!');
-        
-        // إعادة تحميل البيانات
+        const update = { currentCapital: newCapital, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() };
+        if (result === 'ربح') update.totalProfit = (userData.totalProfit || 0) + profitLoss;
+        else update.totalLoss = (userData.totalLoss || 0) + Math.abs(profitLoss);
+        update.totalTrades = (userData.totalTrades || 0) + 1;
+        await db.collection('users').doc(currentUser.uid).update(update);
+
+        $('tradeForm').reset();
+        $('imagePreview').classList.remove('show');
+        $('removeImageBtn').style.display = 'none';
         await loadUserData();
-        
-    } catch (error) {
-        console.error("❌ Error adding trade:", error);
-        showError('حدث خطأ أثناء إضافة الصفقة: ' + error.message);
+        alert('✅ تم إضافة الصفقة بنجاح!');
+    } catch (err) {
+        alert('❌ خطأ: ' + err.message);
     }
-}
+});
 
-// ========== تحديث قائمة الصفقات ==========
-function updateTradesList() {
-    const tradesList = document.getElementById('tradesList');
-    if (!tradesList) return;
-    
-    // تطبيق الفلاتر
-    let filteredTrades = [...userTrades];
-    
-    const filterAsset = document.getElementById('filterAsset').value;
-    const filterSession = document.getElementById('filterSession').value;
-    const filterResult = document.getElementById('filterResult').value;
-    
-    if (filterAsset && filterAsset !== 'all') {
-        filteredTrades = filteredTrades.filter(trade => trade.asset === filterAsset);
-    }
-    
-    if (filterSession && filterSession !== 'all') {
-        filteredTrades = filteredTrades.filter(trade => trade.session === filterSession);
-    }
-    
-    if (filterResult && filterResult !== 'all') {
-        filteredTrades = filteredTrades.filter(trade => trade.result === filterResult);
-    }
-    
-    // تحديث العداد
-    document.getElementById('tradesCount').textContent = filteredTrades.length;
-    
-    if (filteredTrades.length === 0) {
-        tradesList.innerHTML = `
-            <div class="no-data">
-                <i class="fas fa-chart-bar"></i>
-                <p>لا توجد صفقات لعرضها</p>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '';
-    filteredTrades.forEach(trade => {
-        const profitClass = trade.result === 'ربح' ? 'positive' : 'negative';
-        const profitSign = trade.result === 'ربح' ? '+' : '-';
-        const amount = parseFloat(trade.amount) || 0;
-        const profitLoss = parseFloat(trade.profitLoss) || 0;
-        
-        // تنسيق التاريخ
-        let dateStr = '';
-        if (trade.date) {
-            let tradeDate;
-            if (trade.date.toDate) {
-                tradeDate = trade.date.toDate();
-            } else {
-                tradeDate = new Date(trade.date);
-            }
-            dateStr = tradeDate.toLocaleDateString('ar-SA', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-        
-        html += `
-            <div class="transaction-item">
-                <div class="transaction-header">
-                    <div class="transaction-type ${trade.tradeType === 'شراء' ? 'buy' : 'sell'}">
-                        ${trade.tradeType === 'شراء' ? 'شراء' : 'بيع'} ${trade.asset}
-                        <span style="font-size: 0.8em; color: #666; margin-right: 10px;">${dateStr}</span>
-                    </div>
-                    <div class="transaction-actions">
-                        <button class="btn-icon btn-edit" onclick="editTrade('${trade.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        ${trade.imageUrl ? 
-                            `<button class="btn-icon" onclick="showImageModal('${trade.imageUrl}')">
-                                <i class="fas fa-image"></i>
-                            </button>` : ''
-                        }
-                        ${trade.notes ? 
-                            `<button class="btn-icon" onclick="showFullNotes('${trade.notes}')">
-                                <i class="fas fa-sticky-note"></i>
-                            </button>` : ''
-                        }
-                        <button class="btn-icon btn-danger" onclick="deleteTrade('${trade.id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="transaction-details">
-                    <div class="detail">
-                        <span class="label">الجلسة:</span>
-                        <span class="value">${trade.session}</span>
-                    </div>
-                    <div class="detail">
-                        <span class="label">لوت:</span>
-                        <span class="value">$${amount.toFixed(2)}</span>
-                    </div>
-                    <div class="detail">
-                        <span class="label">النتيجة:</span>
-                        <span class="value ${profitClass}">
-                            ${trade.result} (${profitSign}$${Math.abs(profitLoss).toFixed(2)})
-                        </span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    tradesList.innerHTML = html;
-}
-
-// ========== تقويم الصفقات ==========
-function updateCalendar() {
-    const calendarGrid = document.getElementById('calendarGrid');
-    if (!calendarGrid) return;
-    
-    // حساب عدد الأيام في الشهر
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    
-    // تحويل اليوم إلى النظام العربي (الأحد = 0 في JavaScript)
-    const adjustedFirstDay = (firstDay + 6) % 7;
-    
-    let html = '';
-    
-    // إضافة أيام الأسبوع
-    const weekdays = ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
-    weekdays.forEach(day => {
-        html += `<div class="calendar-weekday">${day}</div>`;
-    });
-    
-    // إضافة خلايا فارغة قبل أول يوم من الشهر
-    for (let i = 0; i < adjustedFirstDay; i++) {
-        html += '<div class="calendar-day empty"></div>';
-    }
-    
-    // إضافة أيام الشهر
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        
-        // البحث عن صفقات في هذا اليوم
-        const dayTrades = userTrades.filter(trade => {
-            if (!trade.date) return false;
-            let tradeDate;
-            if (trade.date.toDate) {
-                tradeDate = trade.date.toDate();
-            } else {
-                tradeDate = new Date(trade.date);
-            }
-            const tradeDateStr = tradeDate.toISOString().split('T')[0];
-            return tradeDateStr === dateStr;
-        });
-        
-        let dayClass = 'calendar-day';
-        let dayContent = `<div class="day-number">${day}</div>`;
-        
-        if (dayTrades.length > 0) {
-            dayClass += ' has-trades';
-            
-            // حساب إجمالي الربح/الخسارة لهذا اليوم
-            let dayProfit = 0;
-            dayTrades.forEach(trade => {
-                dayProfit += parseFloat(trade.profitLoss) || 0;
-            });
-            
-            const profitClass = dayProfit >= 0 ? 'positive' : 'negative';
-            const profitSign = dayProfit >= 0 ? '+' : '';
-            
-            dayContent += `
-                <div class="day-trades-count">${dayTrades.length} صفقة</div>
-                <div class="day-profit ${profitClass}">${profitSign}${dayProfit.toFixed(2)}$</div>
-            `;
-        }
-        
-        html += `<div class="${dayClass}" onclick="window.showDayTrades('${dateStr}')">${dayContent}</div>`;
-    }
-    
-    calendarGrid.innerHTML = html;
-    
-    // تحديث عنوان الشهر
-    const monthNames = [
-        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-    ];
-    
-    const calendarTitle = document.getElementById('calendarTitle');
-    if (calendarTitle) {
-        calendarTitle.textContent = `${monthNames[currentMonth]} ${currentYear}`;
-    }
-}
-
-// ========== تحديث الإحصائيات ==========
-function updateStats() {
-    if (!userTrades || userTrades.length === 0) {
-        // تعيين قيم افتراضية إذا لم توجد صفقات
-        document.getElementById('totalTrades').textContent = '0';
-        document.getElementById('winRate').textContent = '0%';
-        document.getElementById('totalProfit').textContent = '$0.00';
-        document.getElementById('totalLoss').textContent = '$0.00';
-        document.getElementById('netProfit').textContent = '$0.00';
-        return;
-    }
-    
-    const stats = calculateStats(userTrades);
-    
-    document.getElementById('totalTrades').textContent = stats.totalTrades;
-    document.getElementById('winRate').textContent = `${stats.successRate.toFixed(1)}%`;
-    document.getElementById('totalProfit').textContent = `$${stats.totalProfit.toFixed(2)}`;
-    document.getElementById('totalLoss').textContent = `$${stats.totalLoss.toFixed(2)}`;
-    
-    const netProfit = stats.totalProfit - stats.totalLoss;
-    document.getElementById('netProfit').textContent = `$${netProfit.toFixed(2)}`;
-    
-    // تحديث رأس المال الحالي في واجهة المستخدم
-    if (userData && document.getElementById('userCapital')) {
-        document.getElementById('userCapital').textContent = `$${userData.currentCapital.toFixed(2)}`;
-    }
-}
-
-// ========== عرض وتحديث رأس المال ==========
-function showCapitalModal() {
-    if (!currentUser || !userData) {
-        showError('يجب تسجيل الدخول أولاً');
-        return;
-    }
-    
-    const modal = document.getElementById('capitalModal');
-    const currentCapitalInput = document.getElementById('currentCapital');
-    
-    if (modal && currentCapitalInput) {
-        currentCapitalInput.value = userData.currentCapital;
-        modal.style.display = 'block';
-    }
-}
-
-async function updateCapital() {
-    if (!currentUser || !userData) {
-        showError('يجب تسجيل الدخول أولاً');
-        return;
-    }
-    
-    const newCapital = parseFloat(document.getElementById('currentCapital').value);
-    
-    if (isNaN(newCapital) || newCapital < 0) {
-        showError('رأس المال يجب أن يكون قيمة عددية موجبة');
-        return;
-    }
-    
+// Delete Trade
+window.deleteTrade = async (id) => {
+    if (!currentUser) return;
+    if (!confirm('هل أنت متأكد من حذف هذه الصفقة؟')) return;
     try {
-        await db.collection('users').doc(currentUser.uid).update({
-            currentCapital: newCapital,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        userData.currentCapital = newCapital;
-        
-        // إغلاق المودال
-        document.getElementById('capitalModal').style.display = 'none';
-        
-        // تحديث الواجهة
-        updateUIAfterLogin();
-        
-        // إعادة رسم الرسم البياني لرأس المال
-        updateCapitalChart();
-        
-        showSuccess('تم تحديث رأس المال بنجاح!');
-        
-    } catch (error) {
-        console.error("❌ Error updating capital:", error);
-        showError('حدث خطأ أثناء تحديث رأس المال');
-    }
-}
+        const doc = await db.collection('trades').doc(id).get();
+        if (!doc.exists) return;
+        const trade = doc.data();
+        const pl = parseFloat(trade.profitLoss) || 0;
+        await db.collection('trades').doc(id).delete();
 
-// ========== دوال الصور ==========
-function previewImage() {
-    const imageFile = document.getElementById('tradeImage').files[0];
-    const preview = document.getElementById('imagePreview');
-    const removeBtn = document.getElementById('removeImageBtn');
-    
-    if (imageFile && preview) {
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-            
-            if (removeBtn) {
-                removeBtn.style.display = 'inline-block';
-            }
-        }
-        
-        reader.readAsDataURL(imageFile);
+        const newCapital = userData.currentCapital - pl;
+        const update = { currentCapital: newCapital };
+        if (trade.result === 'ربح') update.totalProfit = (userData.totalProfit || 0) - pl;
+        else update.totalLoss = (userData.totalLoss || 0) - Math.abs(pl);
+        update.totalTrades = (userData.totalTrades || 0) - 1;
+        await db.collection('users').doc(currentUser.uid).update(update);
+        await loadUserData();
+        alert('✅ تم حذف الصفقة');
+    } catch (err) {
+        alert('❌ خطأ: ' + err.message);
     }
-}
+};
 
-function removeImagePreview() {
-    const preview = document.getElementById('imagePreview');
-    const removeBtn = document.getElementById('removeImageBtn');
-    const imageInput = document.getElementById('tradeImage');
-    
-    if (preview) {
-        preview.src = '';
-        preview.style.display = 'none';
-    }
-    
-    if (removeBtn) {
-        removeBtn.style.display = 'none';
-    }
-    
-    if (imageInput) {
-        imageInput.value = '';
-    }
-}
-
-// ========== دوال الاستراتيجية ==========
-async function saveStrategy() {
-    if (!currentUser) {
-        showError('يجب تسجيل الدخول أولاً');
-        return;
-    }
-    
-    const strategyText = document.getElementById('strategyText').value;
-    
-    if (!strategyText.trim()) {
-        showError('يرجى كتابة الاستراتيجية');
-        return;
-    }
-    
+// Edit Trade
+window.editTrade = async (id) => {
+    if (!currentUser) return;
     try {
-        await db.collection('strategies').doc(currentUser.uid).set({
-            text: strategyText,
+        const doc = await db.collection('trades').doc(id).get();
+        if (!doc.exists) return;
+        const t = doc.data();
+        editingTradeId = id;
+        $('editTradeId').value = id;
+        $('editOriginalProfitLoss').value = t.profitLoss || 0;
+
+        const common = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'XAU/USD', 'BTC/USD', 'ETH/USD'];
+        if (common.includes(t.asset)) {
+            $('editAsset').value = t.asset;
+            $('editOtherAsset').style.display = 'none';
+        } else {
+            $('editAsset').value = 'other';
+            $('editOtherAsset').style.display = 'block';
+            $('editOtherAsset').value = t.asset;
+        }
+        $('editTradeType').value = t.tradeType || 'شراء';
+        $('editAmount').value = t.amount || 0;
+        $('editResult').value = t.result || 'ربح';
+        $('editProfitLoss').value = t.profitLoss || 0;
+        $('editSession').value = t.session || 'أسيوية';
+        $('editNotes').value = t.notes || '';
+
+        const d = t.date?.toDate ? t.date.toDate() : new Date(t.date || Date.now());
+        $('editTradeDate').value = d.toISOString().slice(0, 16);
+
+        const preview = $('editImagePreview');
+        const removeBtn = $('editRemoveImageBtn');
+        if (t.imageUrl) {
+            preview.src = t.imageUrl;
+            preview.classList.add('show');
+            removeBtn.style.display = 'inline-block';
+        } else {
+            preview.classList.remove('show');
+            removeBtn.style.display = 'none';
+        }
+        openModal('editTradeModal');
+    } catch (err) {
+        alert('❌ خطأ في تحميل الصفقة: ' + err.message);
+    }
+};
+
+// Update Trade
+$('editTradeForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = $('editTradeId').value;
+    const originalPL = parseFloat($('editOriginalProfitLoss').value) || 0;
+    if (!id) return;
+
+    const asset = $('editAsset').value;
+    const other = $('editOtherAsset').value.trim();
+    const selectedAsset = asset === 'other' ? other : asset;
+    const tradeType = $('editTradeType').value;
+    const amount = parseFloat($('editAmount').value);
+    const result = $('editResult').value;
+    const profitLoss = parseFloat($('editProfitLoss').value);
+    const session = $('editSession').value;
+    const notes = $('editNotes').value;
+    const date = $('editTradeDate').value;
+    const imageFile = $('editTradeImage').files[0];
+
+    if (!selectedAsset || !tradeType || !amount || !result || isNaN(profitLoss) || !session || !date) {
+        return alert('يرجى ملء جميع الحقول');
+    }
+
+    try {
+        let imageUrl = '';
+        const oldDoc = await db.collection('trades').doc(id).get();
+        if (oldDoc.exists) imageUrl = oldDoc.data().imageUrl || '';
+        if (imageFile) {
+            const ref = storage.ref(`trades/${currentUser.uid}/${Date.now()}_${imageFile.name}`);
+            const snap = await ref.put(imageFile);
+            imageUrl = await snap.ref.getDownloadURL();
+        }
+
+        await db.collection('trades').doc(id).update({
+            asset: selectedAsset,
+            tradeType,
+            amount,
+            result,
+            profitLoss,
+            session,
+            notes,
+            imageUrl,
+            date: firebase.firestore.Timestamp.fromDate(new Date(date)),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        
-        userStrategy = { text: strategyText };
-        displayStrategyPreview();
-        
-        showSuccess('تم حفظ الاستراتيجية بنجاح!');
-        
-    } catch (error) {
-        console.error("❌ Error saving strategy:", error);
-        showError('حدث خطأ أثناء حفظ الاستراتيجية');
+
+        const diff = profitLoss - originalPL;
+        const newCapital = userData.currentCapital + diff;
+        const update = { currentCapital: newCapital };
+        if (oldDoc.exists) {
+            const old = oldDoc.data();
+            if (old.result === 'ربح') update.totalProfit = (userData.totalProfit || 0) - old.profitLoss;
+            else update.totalLoss = (userData.totalLoss || 0) - Math.abs(old.profitLoss);
+            if (result === 'ربح') update.totalProfit = (update.totalProfit || 0) + profitLoss;
+            else update.totalLoss = (update.totalLoss || 0) + Math.abs(profitLoss);
+        }
+        await db.collection('users').doc(currentUser.uid).update(update);
+        closeModal('editTradeModal');
+        await loadUserData();
+        alert('✅ تم تحديث الصفقة');
+    } catch (err) {
+        alert('❌ خطأ: ' + err.message);
     }
+});
+
+// ================================================================
+// STRATEGY
+// ================================================================
+async function loadStrategy() {
+    if (!currentUser) return;
+    try {
+        const doc = await db.collection('strategies').doc(currentUser.uid).get();
+        if (doc.exists) {
+            userStrategy = doc.data();
+            $('strategyText').value = userStrategy.text || '';
+            $('strategyPreview').textContent = userStrategy.text || 'لم تقم بكتابة استراتيجية بعد';
+        }
+    } catch (err) { /* ignore */ }
 }
 
-function displayStrategyPreview() {
-    const strategyPreview = document.getElementById('strategyPreview');
-    const strategyTextInput = document.getElementById('strategyText');
-    
-    if (!userStrategy || !strategyPreview) return;
-    
-    strategyPreview.textContent = userStrategy.text;
-    
-    if (strategyTextInput) {
-        strategyTextInput.value = userStrategy.text;
+$('saveStrategyBtn')?.addEventListener('click', async () => {
+    if (!currentUser) return alert('يجب تسجيل الدخول');
+    const text = $('strategyText').value.trim();
+    if (!text) return alert('يرجى كتابة الاستراتيجية');
+    try {
+        await db.collection('strategies').doc(currentUser.uid).set({ text, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        userStrategy = { text };
+        $('strategyPreview').textContent = text;
+        alert('✅ تم حفظ الاستراتيجية');
+    } catch (err) {
+        alert('❌ خطأ: ' + err.message);
     }
+});
+
+// ================================================================
+// STATS
+// ================================================================
+function updateStats() {
+    const total = userTrades.length;
+    if (total === 0) {
+        ['totalTrades', 'winRate', 'totalProfit', 'totalLoss', 'netProfit'].forEach(id => {
+            const el = $(id);
+            if (el) el.textContent = id === 'totalTrades' ? '0' : id === 'winRate' ? '0%' : '$0.00';
+        });
+        return;
+    }
+    const profits = userTrades.map(t => parseFloat(t.profitLoss) || 0);
+    const wins = profits.filter(p => p > 0).length;
+    const totalProfit = profits.filter(p => p > 0).reduce((a, b) => a + b, 0);
+    const totalLoss = profits.filter(p => p < 0).reduce((a, b) => a + Math.abs(b), 0);
+    const net = totalProfit - totalLoss;
+    const rate = (wins / total) * 100;
+
+    $('totalTrades').textContent = total;
+    $('winRate').textContent = rate.toFixed(1) + '%';
+    $('totalProfit').textContent = '$' + totalProfit.toFixed(2);
+    $('totalLoss').textContent = '$' + totalLoss.toFixed(2);
+    $('netProfit').textContent = '$' + net.toFixed(2);
+    $('netProfit').style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+
+    // KPI color for net profit
+    const netEl = $('netProfit');
+    if (netEl) netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
 }
 
-// ========== دوال الرسوم البيانية ==========
+// ================================================================
+// TRADES LIST
+// ================================================================
+function updateTradesList() {
+    const container = $('tradesList');
+    const count = $('tradesCount');
+    if (!container) return;
+
+    let filtered = [...userTrades];
+    const asset = $('filterAsset')?.value || 'all';
+    const session = $('filterSession')?.value || 'all';
+    const result = $('filterResult')?.value || 'all';
+
+    if (asset !== 'all') filtered = filtered.filter(t => t.asset === asset);
+    if (session !== 'all') filtered = filtered.filter(t => t.session === session);
+    if (result !== 'all') filtered = filtered.filter(t => t.result === result);
+
+    if (count) count.textContent = filtered.length;
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد صفقات</p></div>`;
+        return;
+    }
+
+    container.innerHTML = filtered.slice(0, 50).map(t => {
+        const pl = parseFloat(t.profitLoss) || 0;
+        const isProfit = pl >= 0;
+        const dateStr = t.date ? new Date(t.date).toLocaleDateString('ar-EG') : '—';
+        return `
+            <div class="trade-item ${isProfit ? '' : 'loss'}">
+                <div class="trade-main">
+                    <span class="symbol">${t.asset || '—'}</span>
+                    <span class="type ${t.tradeType === 'شراء' ? 'buy' : 'sell'}">${t.tradeType || '—'}</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">${dateStr}</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">${t.session || '—'}</span>
+                </div>
+                <div class="trade-meta">
+                    <span class="pnl ${isProfit ? 'positive' : 'negative'}">${isProfit ? '+' : ''}$${Math.abs(pl).toFixed(2)}</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">لوت $${(t.amount || 0).toFixed(2)}</span>
+                    <div class="trade-actions">
+                        ${t.imageUrl ? `<button class="btn-icon" onclick="showImage('${t.imageUrl}')"><i class="fas fa-image"></i></button>` : ''}
+                        ${t.notes ? `<button class="btn-icon" onclick="showNotes('${t.notes.replace(/'/g, "\\'")}')"><i class="fas fa-sticky-note"></i></button>` : ''}
+                        <button class="btn-icon" onclick="editTrade('${t.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon" onclick="deleteTrade('${t.id}')" style="color:var(--red);"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ================================================================
+// CALENDAR
+// ================================================================
+function updateCalendar() {
+    const grid = $('calendarGrid');
+    if (!grid) return;
+    const title = $('calendarTitle');
+    const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    if (title) title.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const firstDay = (new Date(currentYear, currentMonth, 1).getDay() + 6) % 7; // RTL
+
+    let html = '';
+    const weekdays = ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
+    weekdays.forEach(d => html += `<div class="calendar-weekday">${d}</div>`);
+
+    for (let i = 0; i < firstDay; i++) html += '<div class="calendar-day empty"></div>';
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const dayTrades = userTrades.filter(t => {
+            if (!t.date) return false;
+            const d = t.date instanceof Date ? t.date : new Date(t.date);
+            return d.toISOString().split('T')[0] === dateStr;
+        });
+        let dayPnl = 0;
+        dayTrades.forEach(t => dayPnl += parseFloat(t.profitLoss) || 0);
+
+        let cls = 'calendar-day';
+        if (dayTrades.length > 0) cls += ' has-trades';
+        const pnlClass = dayPnl >= 0 ? 'positive' : 'negative';
+        html += `
+            <div class="${cls}" onclick="showDayTrades('${dateStr}')">
+                <div class="day-num">${day}</div>
+                ${dayTrades.length > 0 ? `<div class="day-count">${dayTrades.length} صفقة</div>` : ''}
+                ${dayTrades.length > 0 ? `<div class="day-pnl ${pnlClass}">${dayPnl >= 0 ? '+' : ''}$${dayPnl.toFixed(2)}</div>` : ''}
+            </div>
+        `;
+    }
+    grid.innerHTML = html;
+}
+
+window.prevMonth = () => { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } updateCalendar(); };
+window.nextMonth = () => { currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; } updateCalendar(); };
+
+window.showDayTrades = (dateStr) => {
+    const dayTrades = userTrades.filter(t => {
+        if (!t.date) return false;
+        const d = t.date instanceof Date ? t.date : new Date(t.date);
+        return d.toISOString().split('T')[0] === dateStr;
+    });
+    const details = $('dayDetails');
+    const title = $('selectedDayTitle');
+    const list = $('dayTradesList');
+    if (!details || !list) return;
+
+    const d = new Date(dateStr + 'T00:00:00');
+    title.textContent = `تفاصيل الصفقات ليوم ${d.toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}`;
+
+    if (dayTrades.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-muted);">لا توجد صفقات في هذا اليوم</p>';
+    } else {
+        let total = 0;
+        list.innerHTML = dayTrades.map(t => {
+            const pl = parseFloat(t.profitLoss) || 0;
+            total += pl;
+            return `
+                <div class="trade-item ${pl >= 0 ? '' : 'loss'}" style="margin-bottom:8px;">
+                    <div class="trade-main">
+                        <span class="symbol">${t.asset}</span>
+                        <span class="type ${t.tradeType === 'شراء' ? 'buy' : 'sell'}">${t.tradeType}</span>
+                        <span style="font-size:0.8rem;color:var(--text-muted);">${t.session}</span>
+                    </div>
+                    <span class="pnl ${pl >= 0 ? 'positive' : 'negative'}">${pl >= 0 ? '+' : ''}$${Math.abs(pl).toFixed(2)}</span>
+                </div>
+            `;
+        }).join('');
+        list.innerHTML += `
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color);font-weight:700;text-align:left;">
+                إجمالي اليوم: <span style="color:${total >= 0 ? 'var(--green)' : 'var(--red)'}">${total >= 0 ? '+' : ''}$${total.toFixed(2)}</span>
+            </div>
+        `;
+    }
+    details.style.display = 'block';
+};
+
+// ================================================================
+// CHARTS
+// ================================================================
 function updateCharts() {
-    if (!userTrades || userTrades.length === 0 || !userData) {
-        console.log("📊 No data for charts");
-        // عرض رسالة "لا توجد بيانات" فقط في الحاويات الفارغة
-        const chartContainers = document.querySelectorAll('.chart-container');
-        chartContainers.forEach(container => {
-            if (!container.querySelector('canvas')) {
-                container.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
+    if (userTrades.length === 0) {
+        ['winLossChart', 'sessionChart', 'assetChart', 'profitChart', 'capitalChart'].forEach(id => {
+            const canvas = $(id);
+            if (canvas) {
+                const parent = canvas.parentElement;
+                if (parent) parent.innerHTML = `<div class="empty-state" style="padding:20px;"><p>لا توجد بيانات</p></div>`;
             }
         });
         return;
     }
-    
-    console.log("📊 Updating charts with", userTrades.length, "trades");
-    
-    // تحديث الرسوم البيانية مع تأخير لضمان عرض العناصر
-    setTimeout(() => {
-        updateWinLossChart();
-        updateSessionChart();
-        updateAssetChart();
-        updateProfitChart();
-        updateCapitalChart();
-    }, 300);
-}
+    // Destroy old charts
+    Object.values(chartInstances).forEach(c => { if (c) c.destroy(); });
+    chartInstances = {};
 
-function updateWinLossChart() {
-    const canvas = document.getElementById('winLossChart');
-    if (!canvas) {
-        console.log("❌ winLossChart canvas not found");
-        return;
-    }
-    
-    // تنظيف الرسم البياني السابق
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
-    }
-    
-    const stats = calculateStats(userTrades);
-    
-    // تأكد من وجود بيانات
-    if (stats.winningTrades === 0 && stats.losingTrades === 0) {
-        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
-        return;
-    }
-    
-    try {
-        new Chart(canvas, {
-            type: 'doughnut',
-            data: {
-                labels: ['صفقات رابحة', 'صفقات خاسرة'],
-                datasets: [{
-                    data: [stats.winningTrades, stats.losingTrades],
-                    backgroundColor: ['#4CAF50', '#F44336'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'نسبة الربح والخسارة',
-                        font: {
-                            family: 'Cairo, sans-serif',
-                            size: 14
-                        }
-                    }
-                }
-            }
-        });
-        console.log("✅ winLossChart updated");
-    } catch (error) {
-        console.error("❌ Error updating winLossChart:", error);
-    }
-}
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#848e9c' : '#5e6673';
+    const gridColor = isDark ? '#2a2f3d' : '#e6e8ec';
 
-function updateSessionChart() {
-    const canvas = document.getElementById('sessionChart');
-    if (!canvas) {
-        console.log("❌ sessionChart canvas not found");
-        return;
-    }
-    
-    // تنظيف الرسم البياني السابق
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
-    }
-    
-    // تجميع الصفقات حسب الجلسة
-    const sessionData = {};
-    userTrades.forEach(trade => {
-        if (trade.session) {
-            sessionData[trade.session] = (sessionData[trade.session] || 0) + 1;
-        }
+    // Win/Loss Doughnut
+    const wins = userTrades.filter(t => t.result === 'ربح').length;
+    const losses = userTrades.filter(t => t.result === 'خسارة').length;
+    chartInstances.winLoss = new Chart($('winLossChart'), {
+        type: 'doughnut',
+        data: { labels: ['أرباح', 'خسائر'], datasets: [{ data: [wins, losses], backgroundColor: ['#00d4aa', '#f6465d'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor } } } }
     });
-    
-    const sessions = Object.keys(sessionData);
-    const counts = Object.values(sessionData);
-    
-    // تأكد من وجود بيانات
-    if (sessions.length === 0) {
-        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
-        return;
-    }
-    
-    try {
-        new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels: sessions,
-                datasets: [{
-                    label: 'عدد الصفقات',
-                    data: counts,
-                    backgroundColor: '#667eea',
-                    borderColor: '#667eea',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'الصفقات حسب الجلسة',
-                        font: {
-                            family: 'Cairo, sans-serif',
-                            size: 14
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        console.log("✅ sessionChart updated");
-    } catch (error) {
-        console.error("❌ Error updating sessionChart:", error);
-    }
-}
 
-function updateAssetChart() {
-    const canvas = document.getElementById('assetChart');
-    if (!canvas) {
-        console.log("❌ assetChart canvas not found");
-        return;
-    }
-    
-    // تنظيف الرسم البياني السابق
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
-    }
-    
-    // تجميع الصفقات حسب الأصل
-    const assetData = {};
-    userTrades.forEach(trade => {
-        if (trade.asset) {
-            assetData[trade.asset] = (assetData[trade.asset] || 0) + 1;
-        }
-    });
-    
-    const assets = Object.keys(assetData);
-    const counts = Object.values(assetData);
-    
-    // تأكد من وجود بيانات
-    if (assets.length === 0) {
-        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
-        return;
-    }
-    
-    // توليد ألوان متعددة
-    const backgroundColors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
-    ];
-    
-    try {
-        new Chart(canvas, {
-            type: 'pie',
-            data: {
-                labels: assets,
-                datasets: [{
-                    data: counts,
-                    backgroundColor: backgroundColors.slice(0, assets.length),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'توزيع الصفقات حسب الأصل',
-                        font: {
-                            family: 'Cairo, sans-serif',
-                            size: 14
-                        }
-                    }
-                }
-            }
-        });
-        console.log("✅ assetChart updated");
-    } catch (error) {
-        console.error("❌ Error updating assetChart:", error);
-    }
-}
-
-function updateProfitChart() {
-    const canvas = document.getElementById('profitChart');
-    if (!canvas) {
-        console.log("❌ profitChart canvas not found");
-        return;
-    }
-    
-    // تنظيف الرسم البياني السابق
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
-    }
-    
-    // تجميع الأرباح حسب التاريخ (آخر 7 أيام)
-    const last7Days = [];
-    const profitData = [];
-    
-    for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        let dayProfit = 0;
-        userTrades.forEach(trade => {
-            if (!trade.date) return;
-            
-            let tradeDate;
-            if (trade.date.toDate) {
-                tradeDate = trade.date.toDate();
-            } else {
-                tradeDate = new Date(trade.date);
-            }
-            
-            const tradeDateStr = tradeDate.toISOString().split('T')[0];
-            if (tradeDateStr === dateStr) {
-                dayProfit += parseFloat(trade.profitLoss) || 0;
-            }
-        });
-        
-        last7Days.push(dateStr);
-        profitData.push(dayProfit);
-    }
-    
-    // تأكد من وجود بيانات
-    if (profitData.length === 0 || profitData.every(val => val === 0)) {
-        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
-        return;
-    }
-    
-    try {
-        new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: last7Days,
-                datasets: [{
-                    label: 'صافي الربح اليومي',
-                    data: profitData,
-                    borderColor: '#4CAF50',
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'تطور الأرباح خلال الأسبوع',
-                        font: {
-                            family: 'Cairo, sans-serif',
-                            size: 14
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        ticks: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        console.log("✅ profitChart updated");
-    } catch (error) {
-        console.error("❌ Error updating profitChart:", error);
-    }
-}
-
-function updateCapitalChart() {
-    const canvas = document.getElementById('capitalChart');
-    if (!canvas) {
-        console.log("❌ capitalChart canvas not found");
-        return;
-    }
-    
-    // تنظيف الرسم البياني السابق
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
-    }
-    
-    // محاكاة نمو رأس المال بناءً على الصفقات
-    let capital = userData.initialCapital;
-    const capitalData = [capital];
-    const capitalDates = ['البداية'];
-    
-    // ترتيب الصفقات من الأقدم إلى الأحدث
-    const sortedTrades = [...userTrades].sort((a, b) => {
-        const dateA = a.date ? (a.date.toDate ? a.date.toDate() : new Date(a.date)) : new Date(0);
-        const dateB = b.date ? (b.date.toDate ? b.date.toDate() : new Date(b.date)) : new Date(0);
-        return dateA - dateB;
-    });
-    
-    sortedTrades.forEach((trade, index) => {
-        capital += parseFloat(trade.profitLoss) || 0;
-        capitalData.push(capital);
-        capitalDates.push(`صفقة ${index + 1}`);
-    });
-    
-    // تحديث برأس المال الحالي الفعلي
-    if (userData.currentCapital !== capital) {
-        capitalData.push(userData.currentCapital);
-        capitalDates.push('الحالي');
-    }
-    
-    // تأكد من وجود بيانات
-    if (capitalData.length <= 1) {
-        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
-        return;
-    }
-    
-    try {
-        const chart = new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: capitalDates,
-                datasets: [{
-                    label: 'رأس المال',
-                    data: capitalData,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'تطور رأس المال',
-                        font: {
-                            family: 'Cairo, sans-serif',
-                            size: 14
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        ticks: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            },
-                            callback: function(value) {
-                                return '$' + value.toFixed(2);
-                            }
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            font: {
-                                family: 'Cairo, sans-serif'
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        
-        // حفظ المثيل للتعديل لاحقاً
-        chartInstances['capitalChart'] = chart;
-        console.log("✅ capitalChart updated");
-    } catch (error) {
-        console.error("❌ Error updating capitalChart:", error);
-    }
-}
-
-// ========== دوال الأداء ==========
-function updatePerformanceCharts() {
-    if (!userTrades || userTrades.length === 0) return;
-    
-    updateMonthlyTradesChart();
-    updateMonthlySuccessChart();
-}
-
-function updateMonthlyTradesChart() {
-    const canvas = document.getElementById('monthlyTradesChart');
-    if (!canvas) return;
-    
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
-    }
-    
-    // تجميع الصفقات حسب الشهر
-    const monthlyData = {};
-    const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-                       'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    
-    userTrades.forEach(trade => {
-        if (!trade.date) return;
-        
-        let tradeDate;
-        if (trade.date.toDate) {
-            tradeDate = trade.date.toDate();
-        } else {
-            tradeDate = new Date(trade.date);
-        }
-        
-        const month = tradeDate.getMonth();
-        const year = tradeDate.getFullYear();
-        const key = `${year}-${month}`;
-        
-        monthlyData[key] = (monthlyData[key] || 0) + 1;
-    });
-    
-    const sortedKeys = Object.keys(monthlyData).sort();
-    const months = sortedKeys.map(key => {
-        const [year, month] = key.split('-');
-        return `${monthNames[parseInt(month)]} ${year}`;
-    });
-    const counts = sortedKeys.map(key => monthlyData[key]);
-    
-    // تأكد من وجود بيانات
-    if (months.length === 0) {
-        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
-        return;
-    }
-    
-    new Chart(canvas, {
+    // Session Bar
+    const sessions = {};
+    userTrades.forEach(t => { if (t.session) sessions[t.session] = (sessions[t.session] || 0) + 1; });
+    chartInstances.session = new Chart($('sessionChart'), {
         type: 'bar',
-        data: {
-            labels: months,
-            datasets: [{
-                label: 'عدد الصفقات',
-                data: counts,
-                backgroundColor: '#36A2EB',
-                borderColor: '#36A2EB',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: true,
-                    text: 'الصفقات حسب الشهر',
-                    font: {
-                        family: 'Cairo, sans-serif',
-                        size: 14
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        font: {
-                            family: 'Cairo, sans-serif'
-                        }
-                    }
-                },
-                x: {
-                    ticks: {
-                        font: {
-                            family: 'Cairo, sans-serif'
-                        }
-                    }
-                }
-            }
-        }
+        data: { labels: Object.keys(sessions), datasets: [{ label: 'الصفقات', data: Object.values(sessions), backgroundColor: '#4a7cf7', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }, x: { ticks: { color: textColor } } } }
     });
-}
 
-function updateMonthlySuccessChart() {
-    const canvas = document.getElementById('monthlySuccessChart');
-    if (!canvas) return;
-    
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
+    // Asset Pie
+    const assets = {};
+    userTrades.forEach(t => { if (t.asset) assets[t.asset] = (assets[t.asset] || 0) + 1; });
+    const colors = ['#00d4aa', '#4a7cf7', '#fbbf24', '#f6465d', '#a78bfa', '#34d399', '#f472b6'];
+    const assetLabels = Object.keys(assets);
+    const assetData = Object.values(assets);
+    chartInstances.asset = new Chart($('assetChart'), {
+        type: 'pie',
+        data: { labels: assetLabels, datasets: [{ data: assetData, backgroundColor: colors.slice(0, assetLabels.length), borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: textColor } } } }
+    });
+
+    // Profit Line (last 7 days)
+    const last7 = [];
+    const profit7 = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        let sum = 0;
+        userTrades.forEach(t => {
+            if (!t.date) return;
+            const td = t.date instanceof Date ? t.date : new Date(t.date);
+            if (td.toISOString().split('T')[0] === key) sum += parseFloat(t.profitLoss) || 0;
+        });
+        last7.push(key.slice(5));
+        profit7.push(sum);
     }
-    
-    // حساب نسبة النجاح حسب الشهر
-    const monthlySuccess = {};
-    const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-                       'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    
-    userTrades.forEach(trade => {
-        if (!trade.date) return;
-        
-        let tradeDate;
-        if (trade.date.toDate) {
-            tradeDate = trade.date.toDate();
-        } else {
-            tradeDate = new Date(trade.date);
-        }
-        
-        const month = tradeDate.getMonth();
-        const year = tradeDate.getFullYear();
-        const key = `${year}-${month}`;
-        
-        if (!monthlySuccess[key]) {
-            monthlySuccess[key] = { total: 0, wins: 0 };
-        }
-        
-        monthlySuccess[key].total++;
-        if (trade.result === 'ربح') {
-            monthlySuccess[key].wins++;
-        }
-    });
-    
-    const sortedKeys = Object.keys(monthlySuccess).sort();
-    const months = sortedKeys.map(key => {
-        const [year, month] = key.split('-');
-        return `${monthNames[parseInt(month)]} ${year}`;
-    });
-    const successRates = sortedKeys.map(key => {
-        const data = monthlySuccess[key];
-        return data.total > 0 ? (data.wins / data.total) * 100 : 0;
-    });
-    
-    // تأكد من وجود بيانات
-    if (months.length === 0) {
-        canvas.parentElement.innerHTML = '<div class="no-data">لا توجد بيانات لعرضها</div>';
-        return;
-    }
-    
-    new Chart(canvas, {
+    chartInstances.profit = new Chart($('profitChart'), {
         type: 'line',
-        data: {
-            labels: months,
-            datasets: [{
-                label: 'نسبة النجاح %',
-                data: successRates,
-                borderColor: '#4CAF50',
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    labels: {
-                        font: {
-                            family: 'Cairo, sans-serif'
-                        }
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'نسبة النجاح حسب الشهر',
-                    font: {
-                        family: 'Cairo, sans-serif',
-                        size: 14
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    min: 0,
-                    max: 100,
-                    ticks: {
-                        font: {
-                            family: 'Cairo, sans-serif'
-                        }
-                    }
-                },
-                x: {
-                    ticks: {
-                        font: {
-                            family: 'Cairo, sans-serif'
-                        }
-                    }
-                }
-            }
-        }
+        data: { labels: last7, datasets: [{ label: 'صافي الربح اليومي', data: profit7, borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: textColor } } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor } }, x: { ticks: { color: textColor } } } }
+    });
+
+    // Capital Chart
+    const capData = [userData.initialCapital];
+    const capLabels = ['البداية'];
+    let cap = userData.initialCapital;
+    const sorted = [...userTrades].sort((a, b) => (a.date || 0) - (b.date || 0));
+    sorted.forEach((t, i) => {
+        cap += parseFloat(t.profitLoss) || 0;
+        capData.push(cap);
+        capLabels.push(`#${i+1}`);
+    });
+    chartInstances.capital = new Chart($('capitalChart'), {
+        type: 'line',
+        data: { labels: capLabels, datasets: [{ label: 'رأس المال', data: capData, borderColor: '#4a7cf7', backgroundColor: 'rgba(74,124,247,0.1)', fill: true, tension: 0.3, pointRadius: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: textColor } } }, scales: { y: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => '$' + v.toFixed(0) } }, x: { ticks: { color: textColor, maxTicksLimit: 15 } } } }
     });
 }
 
-// ========== التحليل المتقدم ==========
-function performAdvancedAnalysis() {
-    if (!userTrades || userTrades.length < 5) {
-        console.log("⚠️ Not enough trades for analysis");
+// ================================================================
+// ANALYSIS
+// ================================================================
+function updateAnalysis() {
+    const container = $('analysisContent');
+    if (!container) return;
+    if (userTrades.length < 5) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-chart-line"></i><p>يحتاج التحليل إلى 5 صفقات على الأقل</p></div>`;
         return;
     }
-    
-    console.log("🔍 Performing advanced analysis...");
-    
-    // 1. تحليل أنماط الخسارة
-    analyzeLossPatterns();
-    
-    // 2. حساب نسبة Risk/Reward
-    calculateRiskRewardRatio();
-    
-    // 3. حساب Max Drawdown
-    calculateMaxDrawdown();
-    
-    // 4. حساب مؤشرات الأداء المتقدمة
-    calculateAdvancedMetrics();
-    
-    // 5. حساب حجم اللوت الأمثل
-    calculateOptimalLotSize();
-    
-    // 6. عرض النتائج
-    updateAnalysisContent();
-}
 
-function analyzeLossPatterns() {
-    const losingTrades = userTrades.filter(trade => trade.result === 'خسارة');
-    
-    if (losingTrades.length === 0) {
-        advancedMetrics.lossPatterns = {
-            hasPatterns: false,
-            message: "لا توجد صفقات خاسرة للتحليل"
-        };
-        return;
-    }
-    
-    // تحليل حسب اليوم
-    const lossByDay = {};
+    const total = userTrades.length;
+    const wins = userTrades.filter(t => t.result === 'ربح').length;
+    const losses = total - wins;
+    const rate = (wins / total) * 100;
+    const profits = userTrades.map(t => parseFloat(t.profitLoss) || 0);
+    const totalProfit = profits.filter(p => p > 0).reduce((a, b) => a + b, 0);
+    const totalLoss = profits.filter(p => p < 0).reduce((a, b) => a + Math.abs(b), 0);
+    const net = totalProfit - totalLoss;
+    const avgWin = wins > 0 ? totalProfit / wins : 0;
+    const avgLoss = losses > 0 ? totalLoss / losses : 0;
+    const rr = avgLoss > 0 ? avgWin / avgLoss : 0;
+    const pf = totalLoss > 0 ? totalProfit / totalLoss : totalProfit;
+
+    // Loss patterns
     const lossBySession = {};
     const lossByAsset = {};
-    
-    losingTrades.forEach(trade => {
-        // حسب اليوم
-        if (trade.date) {
-            let tradeDate;
-            if (trade.date.toDate) {
-                tradeDate = trade.date.toDate();
-            } else {
-                tradeDate = new Date(trade.date);
-            }
-            const dayOfWeek = tradeDate.getDay();
-            lossByDay[dayOfWeek] = (lossByDay[dayOfWeek] || 0) + 1;
-        }
-        
-        // حسب الجلسة
-        if (trade.session) {
-            lossBySession[trade.session] = (lossBySession[trade.session] || 0) + 1;
-        }
-        
-        // حسب الأصل
-        if (trade.asset) {
-            lossByAsset[trade.asset] = (lossByAsset[trade.asset] || 0) + 1;
-        }
+    userTrades.filter(t => t.result === 'خسارة').forEach(t => {
+        if (t.session) lossBySession[t.session] = (lossBySession[t.session] || 0) + 1;
+        if (t.asset) lossByAsset[t.asset] = (lossByAsset[t.asset] || 0) + 1;
     });
-    
-    // إيجاد الأنماط
-    const patterns = [];
-    const suggestions = [];
-    
-    // تحليل اليوم الأسوأ
-    const worstDay = Object.keys(lossByDay).reduce((a, b) => lossByDay[a] > lossByDay[b] ? a : b);
-    const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    patterns.push(`معظم خسائرك في يوم ${dayNames[worstDay]}`);
-    suggestions.push(`فكر في تقليل حجم التداول أو التوقف في يوم ${dayNames[worstDay]}`);
-    
-    // تحليل الجلسة الأسوأ
-    const worstSession = Object.keys(lossBySession).reduce((a, b) => lossBySession[a] > lossBySession[b] ? a : b, '');
-    if (worstSession) {
-        patterns.push(`معظم خسائرك في الجلسة ${worstSession}`);
-        suggestions.push(`راجع استراتيجيتك في الجلسة ${worstSession}`);
-    }
-    
-    // تحليل الأصل الأسوأ
-    const worstAsset = Object.keys(lossByAsset).reduce((a, b) => lossByAsset[a] > lossByAsset[b] ? a : b, '');
-    if (worstAsset) {
-        patterns.push(`معظم خسائرك على الأصل ${worstAsset}`);
-        suggestions.push(`فكر في تجنب تداول ${worstAsset} أو تحسين استراتيجيتك فيه`);
-    }
-    
-    advancedMetrics.lossPatterns = {
-        hasPatterns: patterns.length > 0,
-        patterns: patterns,
-        suggestions: suggestions,
-        losingTradesCount: losingTrades.length,
-        lossPercentage: (losingTrades.length / userTrades.length) * 100
-    };
+    const worstSession = Object.keys(lossBySession).sort((a, b) => lossBySession[b] - lossBySession[a])[0] || '—';
+    const worstAsset = Object.keys(lossByAsset).sort((a, b) => lossByAsset[b] - lossByAsset[a])[0] || '—';
+
+    // Tips
+    const tips = rate < 40 ? ['راجع استراتيجية الدخول', 'استخدم وقف الخسارة', 'تدرب على حساب تجريبي'] :
+                  rate < 60 ? ['حسن نسبة العائد للمخاطرة', 'استخدم التحليل الفني', 'احتفظ بمذكرة تداول'] :
+                  ['استمر في استراتيجيتك', 'زود حجم الصفقات تدريجياً', 'نوع بين الأصول'];
+
+    container.innerHTML = `
+        <div class="analysis-card">
+            <h4><i class="fas fa-chart-line-down"></i> أنماط الخسارة</h4>
+            <div class="metric-row"><span class="label">عدد الخسائر</span><span class="value">${losses}</span></div>
+            <div class="metric-row"><span class="label">نسبة الخسائر</span><span class="value">${(losses/total*100).toFixed(1)}%</span></div>
+            <div class="metric-row"><span class="label">الجلسة الأكثر خسارة</span><span class="value">${worstSession}</span></div>
+            <div class="metric-row"><span class="label">الأصل الأكثر خسارة</span><span class="value">${worstAsset}</span></div>
+        </div>
+        <div class="analysis-card">
+            <h4><i class="fas fa-lightbulb"></i> نصائح لتحسين الأداء</h4>
+            <div class="tip-grid">
+                ${tips.map(t => `<div class="tip-item"><i class="fas fa-bullseye"></i>${t}</div>`).join('')}
+            </div>
+        </div>
+        <div class="analysis-card">
+            <h4><i class="fas fa-balance-scale"></i> مقاييس المخاطرة</h4>
+            <div class="metric-row"><span class="label">نسبة Risk/Reward</span><span class="value ${rr >= 1.5 ? 'positive' : 'negative'}">${rr.toFixed(2)}</span></div>
+            <div class="metric-row"><span class="label">Profit Factor</span><span class="value ${pf >= 1.5 ? 'positive' : 'negative'}">${pf.toFixed(2)}</span></div>
+            <div class="metric-row"><span class="label">متوسط الربح</span><span class="value positive">$${avgWin.toFixed(2)}</span></div>
+            <div class="metric-row"><span class="label">متوسط الخسارة</span><span class="value negative">$${avgLoss.toFixed(2)}</span></div>
+        </div>
+        ${losses >= 3 ? `
+        <div class="analysis-card warning">
+            <h4><i class="fas fa-exclamation-triangle"></i> تنبيه: سلسلة خسائر</h4>
+            <p style="color:var(--text-secondary);">لديك ${losses} خسائر. ننصح بأخذ استراحة لمدة 24 ساعة لإعادة التركيز.</p>
+        </div>` : ''}
+    `;
 }
 
-function calculateRiskRewardRatio() {
-    const winningTrades = userTrades.filter(trade => trade.result === 'ربح');
-    const losingTrades = userTrades.filter(trade => trade.result === 'خسارة');
-    
-    if (winningTrades.length === 0 || losingTrades.length === 0) {
-        advancedMetrics.riskRewardRatio = 0;
-        return;
-    }
-    
-    const avgWin = winningTrades.reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0) / winningTrades.length;
-    const avgLoss = losingTrades.reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0) / losingTrades.length;
-    
-    advancedMetrics.riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : 0;
-}
+$('analyzeBtn')?.addEventListener('click', updateAnalysis);
 
-function calculateMaxDrawdown() {
-    let peak = userData.initialCapital;
-    let maxDrawdown = 0;
-    let currentCapital = userData.initialCapital;
-    
-    // ترتيب الصفقات حسب التاريخ
-    const sortedTrades = [...userTrades].sort((a, b) => {
-        const dateA = a.date ? (a.date.toDate ? a.date.toDate() : new Date(a.date)) : new Date(0);
-        const dateB = b.date ? (b.date.toDate ? b.date.toDate() : new Date(b.date)) : new Date(0);
-        return dateA - dateB;
+// ================================================================
+// MODALS
+// ================================================================
+function openModal(id) { $(id)?.classList.add('active'); }
+window.closeModal = (id) => { $(id)?.classList.remove('active'); };
+window.showImage = (url) => { $('modalImage').src = url; openModal('imageModal'); };
+window.showNotes = (notes) => { $('notesContent').textContent = notes; openModal('notesModal'); };
+
+$('editCapitalBtn')?.addEventListener('click', () => {
+    if (!userData) return;
+    $('currentCapitalInput').value = userData.currentCapital;
+    openModal('capitalModal');
+});
+
+$('saveCapitalBtn')?.addEventListener('click', async () => {
+    if (!currentUser || !userData) return;
+    const val = parseFloat($('currentCapitalInput').value);
+    if (isNaN(val) || val < 0) return alert('قيمة غير صالحة');
+    try {
+        await db.collection('users').doc(currentUser.uid).update({ currentCapital: val });
+        userData.currentCapital = val;
+        $('userCapital').textContent = '$' + val.toFixed(2);
+        $('currentCapitalDisplay').textContent = '$' + val.toFixed(2);
+        closeModal('capitalModal');
+        alert('✅ تم تحديث رأس المال');
+    } catch (err) { alert('❌ خطأ: ' + err.message); }
+});
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', (e) => { if (e.target === el) el.classList.remove('active'); });
+});
+
+// ================================================================
+// FILTERS
+// ================================================================
+['filterAsset', 'filterSession', 'filterResult'].forEach(id => {
+    $(id)?.addEventListener('change', updateTradesList);
+});
+
+// ================================================================
+// INIT
+// ================================================================
+initTheme();
+
+// Set default date
+document.addEventListener('DOMContentLoaded', () => {
+    const now = new Date();
+    const iso = now.toISOString().slice(0, 16);
+    if ($('tradeDate')) $('tradeDate').value = iso;
+    if ($('editTradeDate')) $('editTradeDate').value = iso;
+});
+
+// Image preview
+$('tradeImage')?.addEventListener('change', function() {
+    const preview = $('imagePreview');
+    const remove = $('removeImageBtn');
+    if (this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.classList.add('show'); remove.style.display = 'inline-block'; };
+        reader.readAsDataURL(this.files[0]);
+    }
+});
+$('removeImageBtn')?.addEventListener('click', () => {
+    $('imagePreview').classList.remove('show');
+    $('removeImageBtn').style.display = 'none';
+    $('tradeImage').value = '';
+});
+
+$('editTradeImage')?.addEventListener('change', function() {
+    const preview = $('editImagePreview');
+    const remove = $('editRemoveImageBtn');
+    if (this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.classList.add('show'); remove.style.display = 'inline-block'; };
+        reader.readAsDataURL(this.files[0]);
+    }
+});
+$('editRemoveImageBtn')?.addEventListener('click', () => {
+    $('editImagePreview').classList.remove('show');
+    $('editRemoveImageBtn').style.display = 'none';
+    $('editTradeImage').value = '';
+});
+
+// Asset "other" toggle
+$('asset')?.addEventListener('change', function() {
+    $('otherAsset').style.display = this.value === 'other' ? 'block' : 'none';
+});
+$('editAsset')?.addEventListener('change', function() {
+    $('editOtherAsset').style.display = this.value === 'other' ? 'block' : 'none';
+});
+
+// ================================================================
+// TABS
+// ================================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+        const target = this.dataset.tab;
+        const el = document.getElementById(target + '-tab');
+        if (el) el.classList.add('active');
+        // Refresh charts/analysis when switching
+        if (target === 'charts') setTimeout(updateCharts, 100);
+        if (target === 'analysis') updateAnalysis();
+        if (target === 'calendar') updateCalendar();
     });
-    
-    sortedTrades.forEach(trade => {
-        currentCapital += trade.profitLoss || 0;
-        
-        if (currentCapital > peak) {
-            peak = currentCapital;
-        }
-        
-        const drawdown = ((peak - currentCapital) / peak) * 100;
-        if (drawdown > maxDrawdown) {
-            maxDrawdown = drawdown;
-        }
+});
+
+// ================================================================
+// PERFORMANCE CHARTS (Monthly)
+// ================================================================
+// These are rendered in the performance tab
+// We'll use the same chart instances but separate
+
+// Override updateCharts to also handle performance charts
+const originalUpdateCharts = updateCharts;
+updateCharts = function() {
+    originalUpdateCharts();
+    // Monthly charts
+    if (userTrades.length === 0) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#848e9c' : '#5e6673';
+    const gridColor = isDark ? '#2a2f3d' : '#e6e8ec';
+
+    // Monthly trades
+    const monthly = {};
+    userTrades.forEach(t => {
+        if (!t.date) return;
+        const d = t.date instanceof Date ? t.date : new Date(t.date);
+        const key = d.getFullYear() + '-' + d.getMonth();
+        monthly[key] = (monthly[key] || 0) + 1;
     });
-    
-    advancedMetrics.maxDrawdown = maxDrawdown;
-}
+    const sorted = Object.keys(monthly).sort();
+    const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const labels = sorted.map(k => { const [y,m] = k.split('-'); return monthNames[parseInt(m)] + ' ' + y; });
+    const data = sorted.map(k => monthly[k]);
 
-function calculateAdvancedMetrics() {
-    const winningTrades = userTrades.filter(trade => trade.result === 'ربح');
-    const losingTrades = userTrades.filter(trade => trade.result === 'خسارة');
-    
-    // Sharpe Ratio (مبسط)
-    const avgReturn = (winningTrades.length - losingTrades.length) / userTrades.length;
-    const returns = userTrades.map(trade => trade.result === 'ربح' ? 1 : -1);
-    const stdDev = Math.sqrt(returns.map(r => Math.pow(r - avgReturn, 2)).reduce((a, b) => a + b, 0) / returns.length);
-    advancedMetrics.sharpeRatio = stdDev !== 0 ? avgReturn / stdDev : 0;
-    
-    // Win/Loss Ratio
-    advancedMetrics.winLossRatio = losingTrades.length > 0 ? winningTrades.length / losingTrades.length : winningTrades.length;
-    
-    // Profit Factor
-    const totalProfit = winningTrades.reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0);
-    const totalLoss = losingTrades.reduce((sum, trade) => sum + Math.abs(trade.profitLoss || 0), 0);
-    advancedMetrics.profitFactor = totalLoss > 0 ? totalProfit / totalLoss : totalProfit;
-}
+    if (chartInstances.monthlyTrades) chartInstances.monthlyTrades.destroy();
+    chartInstances.monthlyTrades = new Chart($('monthlyTradesChart'), {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'عدد الصفقات', data, backgroundColor: '#4a7cf7', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }, x: { ticks: { color: textColor } } } }
+    });
 
-function calculateOptimalLotSize() {
-    // قاعدة 1%: لا تخاطر بأكثر من 1% من رأس المال في صفقة واحدة
-    const riskPerTrade = userData.currentCapital * 0.01;
-    
-    // افتراض أن متوسط وقف الخسارة هو 20 نقطة
-    const avgStopLoss = 20;
-    
-    // حساب حجم اللوت الأمثل (افتراض أن كل نقطة تساوي 10$ للوت القياسي)
-    const optimalLot = riskPerTrade / (avgStopLoss * 10);
-    
-    advancedMetrics.optimalLotSize = Math.max(0.01, Math.min(optimalLot, 10)); // بين 0.01 و 10 لوت
-    
-    // حساب نسبة المخاطرة الموصى بها
-    const recommendedRisk = Math.min(2, Math.max(0.5, advancedMetrics.riskRewardRatio));
-    advancedMetrics.recommendedRisk = recommendedRisk;
-}
+    // Monthly success rate
+    const monthlySuccess = {};
+    userTrades.forEach(t => {
+        if (!t.date) return;
+        const d = t.date instanceof Date ? t.date : new Date(t.date);
+        const key = d.getFullYear() + '-' + d.getMonth();
+        if (!monthlySuccess[key]) monthlySuccess[key] = { total: 0, wins: 0 };
+        monthlySuccess[key].total++;
+        if (t.result === 'ربح') monthlySuccess[key].wins++;
+    });
+    const sorted2 = Object.keys(monthlySuccess).sort();
+    const labels2 = sorted2.map(k => { const [y,m] = k.split('-'); return monthNames[parseInt(m)] + ' ' + y; });
+    const rates = sorted2.map(k => monthlySuccess[k].total > 0 ? (monthlySuccess[k].wins / monthlySuccess[k].total) * 100 : 0);
 
-function updateAnalysisContent() {
-    const analysisContent = document.getElementById('analysisContent');
-    if (!analysisContent) return;
-    
-    if (!userTrades || userTrades.length < 5) {
-        analysisContent.innerHTML = `
-            <div class="no-data">
-                <i class="fas fa-chart-line"></i>
-                <p>يحتاج التحليل إلى 5 صفقات على الأقل</p>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '';
-    
-    // 1. تحليل أنماط الخسارة
-    if (advancedMetrics.lossPatterns && advancedMetrics.lossPatterns.hasPatterns) {
-        html += `
-            <div class="analysis-card">
-                <h3><i class="fas fa-chart-line-down"></i> تحليل أنماط الخسارة</h3>
-                <div class="analysis-details">
-                    <div class="analysis-item">
-                        <span class="label">عدد الصفقات الخاسرة:</span>
-                        <span class="value">${advancedMetrics.lossPatterns.losingTradesCount}</span>
-                    </div>
-                    <div class="analysis-item">
-                        <span class="label">نسبة الخسائر:</span>
-                        <span class="value">${advancedMetrics.lossPatterns.lossPercentage.toFixed(1)}%</span>
-                    </div>
-                    <div class="analysis-patterns">
-                        <h4>الأنماط المكتشفة:</h4>
-                        <ul>
-                            ${advancedMetrics.lossPatterns.patterns.map(pattern => `<li>${pattern}</li>`).join('')}
-                        </ul>
-                    </div>
-                    <div class="analysis-suggestions">
-                        <h4>اقتراحات للتحسين:</h4>
-                        <ul>
-                            ${advancedMetrics.lossPatterns.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    // 2. نصائح لتحسين نسبة الفوز
-    const stats = calculateStats(userTrades);
-    const winRateTips = getWinRateImprovementTips(stats);
-    html += `
-        <div class="analysis-card">
-            <h3><i class="fas fa-lightbulb"></i> نصائح لتحسين نسبة الفوز</h3>
-            <div class="tips-grid">
-                ${winRateTips.map(tip => `
-                    <div class="tip-card">
-                        <i class="fas fa-bullseye"></i>
-                        <p>${tip}</p>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-    
-    // 3. اقتراح فترات راحة
-    const breakSuggestion = getBreakSuggestion();
-    if (breakSuggestion.needsBreak) {
-        html += `
-            <div class="analysis-card warning">
-                <h3><i class="fas fa-exclamation-triangle"></i> اقتراح فترات راحة</h3>
-                <div class="break-alert">
-                    <i class="fas fa-clock"></i>
-                    <div>
-                        <p class="alert-text">${breakSuggestion.message}</p>
-                        <p class="alert-details">${breakSuggestion.details}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    // 4. نسبة Risk/Reward
-    html += `
-        <div class="analysis-card">
-            <h3><i class="fas fa-balance-scale"></i> نسبة Risk/Reward</h3>
-            <div class="metric-display">
-                <div class="metric-item">
-                    <span class="metric-label">النسبة الحالية:</span>
-                    <span class="metric-value ${advancedMetrics.riskRewardRatio >= 1.5 ? 'positive' : 'negative'}">
-                        ${advancedMetrics.riskRewardRatio.toFixed(2)}
-                    </span>
-                </div>
-                <div class="metric-rating">
-                    ${getRiskRewardRating(advancedMetrics.riskRewardRatio)}
-                </div>
-                <p class="metric-tip">
-                    ${getRiskRewardTip(advancedMetrics.riskRewardRatio)}
-                </p>
-            </div>
-        </div>
-    `;
-    
-    // 5. Max Drawdown
-    html += `
-        <div class="analysis-card">
-            <h3><i class="fas fa-chart-line"></i> أقصى خسارة متتالية</h3>
-            <div class="metric-display">
-                <div class="metric-item">
-                    <span class="metric-label">Max Drawdown:</span>
-                    <span class="metric-value ${advancedMetrics.maxDrawdown < 20 ? 'positive' : 'negative'}">
-                        ${advancedMetrics.maxDrawdown.toFixed(1)}%
-                    </span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress" style="width: ${Math.min(advancedMetrics.maxDrawdown, 100)}%"></div>
-                </div>
-                <p class="metric-tip">
-                    ${advancedMetrics.maxDrawdown < 20 ? 
-                        'ممتاز! إدارة المخاطر جيدة' : 
-                        'مرتفع! تحتاج لتحسين إدارة المخاطر'}
-                </p>
-            </div>
-        </div>
-    `;
-    
-    // 6. مؤشرات أداء متقدمة
-    html += `
-        <div class="analysis-card">
-            <h3><i class="fas fa-chart-bar"></i> مؤشرات الأداء المتقدمة</h3>
-            <div class="advanced-metrics">
-                <div class="metric-card">
-                    <div class="metric-title">Sharpe Ratio</div>
-                    <div class="metric-value ${advancedMetrics.sharpeRatio > 0 ? 'positive' : 'negative'}">
-                        ${advancedMetrics.sharpeRatio.toFixed(2)}
-                    </div>
-                    <div class="metric-desc">مقياس العائد المعدل بالمخاطرة</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Win/Loss Ratio</div>
-                    <div class="metric-value ${advancedMetrics.winLossRatio > 1 ? 'positive' : 'negative'}">
-                        ${advancedMetrics.winLossRatio.toFixed(2)}
-                    </div>
-                    <div class="metric-desc">نسبة الصفقات الرابحة للخاسرة</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Profit Factor</div>
-                    <div class="metric-value ${advancedMetrics.profitFactor > 1.5 ? 'positive' : 'negative'}">
-                        ${advancedMetrics.profitFactor.toFixed(2)}
-                    </div>
-                    <div class="metric-desc">نسبة إجمالي الربح للخسارة</div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // 7. حجم اللوت الأمثل
-    html += `
-        <div class="analysis-card">
-            <h3><i class="fas fa-calculator"></i> حجم اللوت الأمثل</h3>
-            <div class="lot-calculator">
-                <div class="calculator-inputs">
-                    <div class="input-group">
-                        <label>رأس المال الحالي:</label>
-                        <div class="input-value">$${userData.currentCapital.toFixed(2)}</div>
-                    </div>
-                    <div class="input-group">
-                        <label>نسبة المخاطرة الموصى بها:</label>
-                        <div class="input-value">${advancedMetrics.recommendedRisk ? advancedMetrics.recommendedRisk.toFixed(1) + '%' : '1%'}</div>
-                    </div>
-                </div>
-                <div class="calculator-result">
-                    <div class="result-label">حجم اللوت الأمثل:</div>
-                    <div class="result-value">${advancedMetrics.optimalLotSize.toFixed(2)} لوت</div>
-                </div>
-                <p class="calculator-tip">
-                    بناءً على قاعدة المخاطرة بنسبة 1% من رأس المال
-                </p>
-            </div>
-        </div>
-    `;
-    
-    analysisContent.innerHTML = html;
-}
-
-function getWinRateImprovementTips(stats) {
-    const tips = [];
-    
-    if (stats.successRate < 40) {
-        tips.push('راجع استراتيجية الدخول والخروج');
-        tips.push('استخدم أوامر وقف الخسارة في كل صفقة');
-        tips.push('تدرب على حساب تجريبي قبل التداول الحقيقي');
-        tips.push('ركز على أصل واحد أو اثنين فقط');
-    } else if (stats.successRate < 60) {
-        tips.push('حسن من نسبة العائد إلى المخاطرة');
-        tips.push('استخدم التحليل الفني لتحديد نقاط الدخول');
-        tips.push('احتفظ بمذكرة تداول لتحليل الأخطاء');
-        tips.push('خذ استراحة بعد صفقتين خاسرتين متتاليتين');
-    } else {
-        tips.push('استمر في استراتيجيتك الحالية');
-        tips.push('زود حجم الصفقات تدريجياً');
-        tips.push('نوع بين الأصول المختلفة');
-        tips.push('استخدم جني الأرباح الجزئي');
-    }
-    
-    return tips;
-}
-
-function getBreakSuggestion() {
-    // تحقق من سلسلة الخسائر الأخيرة
-    const recentTrades = userTrades.slice(0, 5);
-    const recentLosses = recentTrades.filter(trade => trade.result === 'خسارة').length;
-    
-    if (recentLosses >= 3) {
-        return {
-            needsBreak: true,
-            message: 'أنت في سلسلة خسائر!',
-            details: `لديك ${recentLosses} خسائر في آخر 5 صفقات. ننصحك بأخذ استراحة لمدة 24 ساعة`
-        };
-    }
-    
-    // تحقق من كثرة التداول
-    if (userTrades.length > 20) {
-        const today = new Date();
-        const tradesToday = userTrades.filter(trade => {
-            if (!trade.date) return false;
-            let tradeDate;
-            if (trade.date.toDate) {
-                tradeDate = trade.date.toDate();
-            } else {
-                tradeDate = new Date(trade.date);
-            }
-            return tradeDate.toDateString() === today.toDateString();
-        }).length;
-        
-        if (tradesToday > 10) {
-            return {
-                needsBreak: true,
-                message: 'كثرة التداول اليوم!',
-                details: `قمت بـ ${tradesToday} صفقة اليوم. ننصحك بالتوقف لاستعادة التركيز`
-            };
-        }
-    }
-    
-    return { needsBreak: false };
-}
-
-function getRiskRewardRating(ratio) {
-    if (ratio >= 2) return '<span class="rating excellent">ممتاز (2:1+)</span>';
-    if (ratio >= 1.5) return '<span class="rating good">جيد (1.5:1)</span>';
-    if (ratio >= 1) return '<span class="rating average">مقبول (1:1)</span>';
-    return '<span class="rating poor">ضعيف (أقل من 1:1)</span>';
-}
-
-function getRiskRewardTip(ratio) {
-    if (ratio >= 2) return 'نسبة ممتازة! استمر في استراتيجيتك الحالية';
-    if (ratio >= 1.5) return 'نسبة جيدة، يمكنك تحسينها بالمزيد من الصبر في جني الأرباح';
-    if (ratio >= 1) return 'النسبة مقبولة، حاول زيادة أرباحك أو تقليل خسائرك';
-    return 'تحذير! أرباحك أقل من خسائرك، راجع استراتيجيتك فوراً';
-}
-
-// ========== دوال التحكم في التقويم ==========
-window.prevMonth = function() {
-    currentMonth--;
-    if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-    }
-    updateCalendar();
+    if (chartInstances.monthlySuccess) chartInstances.monthlySuccess.destroy();
+    chartInstances.monthlySuccess = new Chart($('monthlySuccessChart'), {
+        type: 'line',
+        data: { labels: labels2, datasets: [{ label: 'نسبة الفوز %', data: rates, borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,0.1)', fill: true, tension: 0.3, pointRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: textColor } } }, scales: { y: { min: 0, max: 100, grid: { color: gridColor }, ticks: { color: textColor } }, x: { ticks: { color: textColor } } } }
+    });
 };
 
-window.nextMonth = function() {
-    currentMonth++;
-    if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-    }
-    updateCalendar();
-};
+// ================================================================
+// GLOBAL EXPOSURE
+// ================================================================
+window.deleteTrade = deleteTrade;
+window.editTrade = editTrade;
+window.showImage = showImage;
+window.showNotes = showNotes;
+window.closeModal = closeModal;
+window.showDayTrades = showDayTrades;
+window.prevMonth = prevMonth;
+window.nextMonth = nextMonth;
 
-console.log("🎯 Application initialized successfully!");
+console.log('🚀 PS-Trader Pro loaded successfully!');
