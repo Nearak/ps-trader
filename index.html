@@ -6,44 +6,1192 @@
     <title>PS-Trader Pro – نظام تتبع الصفقات</title>
     <link rel="icon" type="image/png" href="https://icons.veryicon.com/png/o/business/bitcoin-icon/trade-1.png">
 
-    <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 
-    <!-- Main Styles -->
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ===== RESET & VARIABLES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --bg-body: #0b0e11;
+            --bg-surface: #13161c;
+            --bg-card: #1a1d27;
+            --bg-card-hover: #242836;
+            --bg-input: #0f121a;
+            --border-color: #2a2f3d;
+            --text-primary: #eaecef;
+            --text-secondary: #848e9c;
+            --text-muted: #5e6673;
+            --green: #00d4aa;
+            --green-bg: rgba(0, 212, 170, 0.12);
+            --red: #f6465d;
+            --red-bg: rgba(246, 70, 93, 0.12);
+            --blue: #4a7cf7;
+            --blue-bg: rgba(74, 124, 247, 0.12);
+            --purple: #a78bfa;
+            --purple-bg: rgba(167, 139, 250, 0.12);
+            --gold: #fbbf24;
+            --gold-bg: rgba(251, 191, 36, 0.12);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.8);
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-surface: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f7f8fa;
+            --bg-input: #f0f2f5;
+            --border-color: #e6e8ec;
+            --text-primary: #1e222d;
+            --text-secondary: #5e6673;
+            --text-muted: #848e9c;
+            --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+            --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+        body {
+            background: var(--bg-body);
+            color: var(--text-primary);
+            font-family: 'Cairo', 'Inter', sans-serif;
+            line-height: 1.6;
+            padding: 16px;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-surface);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-muted);
+            border-radius: 10px;
+        }
+        .hidden {
+            display: none !important;
+        }
+
+        /* ===== AUTH OVERLAY ===== */
+        .auth-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 14, 17, 0.92);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        .auth-overlay.hidden {
+            display: none;
+        }
+        .auth-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 36px 32px;
+            width: 420px;
+            max-width: 100%;
+            box-shadow: var(--shadow-modal);
+            animation: slideUp 0.4s ease;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--green);
+            margin-bottom: 6px;
+        }
+        .auth-logo i {
+            font-size: 28px;
+        }
+        .auth-box h2 {
+            text-align: center;
+            font-size: 22px;
+            color: var(--text-primary);
+        }
+        .auth-box p {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        .auth-tabs {
+            display: flex;
+            background: var(--bg-surface);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        .auth-tab.active {
+            background: linear-gradient(135deg, var(--green), #00b894);
+            color: #fff;
+        }
+        .auth-tab:hover:not(.active) {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+        .auth-form {
+            display: none;
+        }
+        .auth-form.active {
+            display: block;
+        }
+        .auth-form .form-group {
+            margin-bottom: 14px;
+        }
+        .auth-form .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        .auth-form .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 15px;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        .auth-form .form-group input:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+        }
+        .btn-auth {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--green), #00b894);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-auth:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 212, 170, 0.3);
+        }
+        .alert {
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 14px;
+            font-weight: 600;
+            display: none;
+        }
+        .alert-success {
+            background: var(--green-bg);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+        .alert-danger {
+            background: var(--red-bg);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+        .alert-info {
+            background: var(--blue-bg);
+            color: var(--blue);
+            border: 1px solid var(--blue);
+        }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+        .nav-brand i {
+            color: var(--green);
+            font-size: 1.4rem;
+        }
+        .badge-pro {
+            background: linear-gradient(135deg, var(--green), #00b894);
+            color: #fff;
+            font-size: 0.6rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+        .dev-link {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-decoration: none;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+        .dev-link:hover {
+            border-color: var(--green);
+            color: var(--green);
+        }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .theme-toggle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+        .theme-toggle:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            transform: rotate(20deg);
+        }
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .user-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        .capital-badge {
+            background: var(--bg-card);
+            padding: 5px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            font-weight: 700;
+            color: var(--green);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        .btn-logout:hover {
+            background: var(--red-bg);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* ===== KPI CARDS ===== */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: var(--transition);
+            box-shadow: var(--shadow-card);
+        }
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--green);
+            background: var(--bg-card-hover);
+        }
+        .kpi-card.clickable {
+            cursor: pointer;
+        }
+        .kpi-card.clickable:hover {
+            border-color: var(--gold);
+        }
+        .kpi-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .kpi-icon.blue {
+            background: var(--blue-bg);
+            color: var(--blue);
+        }
+        .kpi-icon.green {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        .kpi-icon.profit {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        .kpi-icon.loss {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+        .kpi-icon.purple {
+            background: var(--purple-bg);
+            color: var(--purple);
+        }
+        .kpi-icon.gold {
+            background: var(--gold-bg);
+            color: var(--gold);
+        }
+        .kpi-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .kpi-label {
+            display: block;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .kpi-value {
+            display: block;
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+        .kpi-info small {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+        }
+        .kpi-info small span {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* ===== TABS ===== */
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            padding: 6px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-card-hover);
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--green), #00b894);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.25);
+        }
+        .tab-btn i {
+            font-size: 0.85rem;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== GLASS CARDS ===== */
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-card);
+            transition: var(--transition);
+        }
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .card-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-header h3 i {
+            color: var(--green);
+        }
+        .badge-count {
+            background: var(--bg-surface);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== FORMS ===== */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: var(--transition);
+            font-family: inherit;
+            width: 100%;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.12);
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+        .form-group small {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            margin-top: 3px;
+        }
+        .image-preview {
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .image-preview img {
+            max-width: 100px;
+            max-height: 70px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            display: none;
+            object-fit: cover;
+        }
+        .image-preview img.show {
+            display: block;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn-primary {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, var(--green), #00b894);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 212, 170, 0.3);
+        }
+        .btn-icon {
+            padding: 5px 10px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+        }
+        .btn-icon:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+        .btn-icon.danger {
+            color: var(--red);
+        }
+        .btn-icon.danger:hover {
+            background: var(--red-bg);
+        }
+
+        /* ===== FILTERS ===== */
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-group select {
+            padding: 6px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--green);
+        }
+
+        /* ===== TRADES LIST ===== */
+        .trades-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .trade-item {
+            background: var(--bg-surface);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            border-right: 4px solid var(--green);
+            transition: var(--transition);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .trade-item:hover {
+            background: var(--bg-card-hover);
+        }
+        .trade-item.loss {
+            border-right-color: var(--red);
+        }
+        .trade-item .trade-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .trade-item .trade-main .symbol {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .trade-item .trade-main .type {
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .trade-item .trade-main .type.buy {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        .trade-item .trade-main .type.sell {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+        .trade-item .trade-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .trade-item .trade-meta .pnl {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .trade-item .trade-meta .pnl.positive {
+            color: var(--green);
+        }
+        .trade-item .trade-meta .pnl.negative {
+            color: var(--red);
+        }
+        .trade-item .trade-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        /* ===== CALENDAR ===== */
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .calendar-nav button {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .calendar-nav button:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .calendar-weekday {
+            text-align: center;
+            font-weight: 700;
+            color: var(--text-secondary);
+            padding: 6px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+        .calendar-day {
+            background: var(--bg-surface);
+            border-radius: var(--radius-sm);
+            padding: 8px 4px;
+            min-height: 60px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .calendar-day:hover {
+            border-color: var(--green);
+            transform: scale(1.02);
+        }
+        .calendar-day .day-num {
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .calendar-day .day-count {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .calendar-day .day-pnl {
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+        .calendar-day .day-pnl.positive {
+            color: var(--green);
+        }
+        .calendar-day .day-pnl.negative {
+            color: var(--red);
+        }
+        .calendar-day.has-trades {
+            border-color: var(--green);
+            background: var(--green-bg);
+        }
+        .calendar-day.empty {
+            visibility: hidden;
+        }
+        .calendar-legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .calendar-legend .dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .calendar-legend .dot.has-trades {
+            background: var(--green);
+        }
+        .calendar-legend .dot.positive {
+            background: var(--green);
+        }
+        .calendar-legend .dot.negative {
+            background: var(--red);
+        }
+
+        /* ===== CHARTS ===== */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+        }
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            box-shadow: var(--shadow-card);
+        }
+        .chart-card.full {
+            grid-column: 1 / -1;
+        }
+        .chart-card canvas {
+            width: 100% !important;
+            height: 260px !important;
+        }
+
+        /* ===== STRATEGY ===== */
+        .strategy-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .strategy-area textarea {
+            padding: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+        }
+        .strategy-area textarea:focus {
+            outline: none;
+            border-color: var(--green);
+        }
+        .strategy-preview h4 {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+        .preview-content {
+            background: var(--bg-surface);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+            min-height: 50px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* ===== ANALYSIS ===== */
+        .analysis-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .analysis-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-top: 4px solid var(--blue);
+        }
+        .analysis-card.warning {
+            border-top-color: var(--red);
+            background: var(--red-bg);
+        }
+        .analysis-card h4 {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        .analysis-card h4 i {
+            color: var(--blue);
+        }
+        .analysis-card.warning h4 i {
+            color: var(--red);
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+        .metric-row .label {
+            color: var(--text-secondary);
+        }
+        .metric-row .value {
+            font-weight: 700;
+        }
+        .metric-row .value.positive {
+            color: var(--green);
+        }
+        .metric-row .value.negative {
+            color: var(--red);
+        }
+        .tip-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 8px;
+        }
+        .tip-item {
+            background: var(--bg-card);
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            font-size: 0.8rem;
+            border: 1px solid var(--border-color);
+        }
+        .tip-item i {
+            color: var(--gold);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 1.1rem;
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 30px 16px;
+            color: var(--text-muted);
+        }
+        .empty-state i {
+            font-size: 2.5rem;
+            color: var(--border-color);
+            margin-bottom: 10px;
+            display: block;
+        }
+        .empty-state p {
+            font-size: 0.95rem;
+        }
+
+        /* ===== MODALS ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            max-width: 560px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-modal);
+            animation: modalIn 0.3s ease;
+            position: relative;
+        }
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.6rem;
+            cursor: pointer;
+            position: absolute;
+            left: 16px;
+            top: 12px;
+            transition: var(--transition);
+            line-height: 1;
+        }
+        .modal-close:hover {
+            color: var(--red);
+            transform: rotate(90deg);
+        }
+        .modal-box h3 {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        .modal-box h3 i {
+            color: var(--green);
+            margin-left: 8px;
+        }
+        .modal-box img {
+            max-width: 100%;
+            border-radius: var(--radius-sm);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .chart-card.full {
+                grid-column: 1 / -1;
+            }
+            .analysis-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .navbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .nav-actions {
+                justify-content: space-between;
+            }
+            .user-badge {
+                justify-content: flex-start;
+            }
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .kpi-value {
+                font-size: 1.1rem;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .tab-nav {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .tab-btn {
+                flex-shrink: 0;
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            .calendar-grid {
+                font-size: 0.65rem;
+            }
+            .calendar-day {
+                min-height: 45px;
+                padding: 4px;
+            }
+            .auth-box {
+                padding: 24px 20px;
+            }
+            .trade-item {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .glass-card {
+                padding: 14px;
+            }
+            .modal-box {
+                padding: 20px 16px;
+                margin: 10px;
+            }
+            .analysis-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 480px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+            .kpi-card {
+                padding: 12px 14px;
+            }
+            .kpi-icon {
+                width: 38px;
+                height: 38px;
+                font-size: 0.9rem;
+            }
+            .kpi-value {
+                font-size: 1rem;
+            }
+            .card-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-group {
+                flex-direction: column;
+            }
+            .filter-group select {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
 
-    <!-- ============================================================ -->
-    <!-- AUTH OVERLAY -->
-    <!-- ============================================================ -->
+    <!-- ===== AUTH OVERLAY ===== -->
     <div class="auth-overlay" id="authOverlay">
         <div class="auth-box">
-            <div class="auth-logo">
-                <i class="fas fa-chart-line"></i>
-                <span>PS-Trader</span>
-            </div>
+            <div class="auth-logo"><i class="fas fa-chart-line"></i><span>PS-Trader</span></div>
             <h2>مرحباً بك</h2>
             <p>سجل دخولك لمتابعة صفقاتك</p>
-
             <div class="auth-tabs">
                 <button class="auth-tab active" data-form="login">تسجيل الدخول</button>
                 <button class="auth-tab" data-form="register">إنشاء حساب</button>
             </div>
-
-            <!-- Login Form -->
             <form id="loginForm" class="auth-form active">
                 <div class="form-group">
                     <label><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
@@ -53,13 +1201,9 @@
                     <label><i class="fas fa-lock"></i> كلمة المرور</label>
                     <input type="password" id="loginPassword" placeholder="••••••••" required>
                 </div>
-                <div id="loginAlert" class="alert" style="display:none;"></div>
-                <button type="submit" class="btn-auth">
-                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                </button>
+                <div id="loginAlert" class="alert"></div>
+                <button type="submit" class="btn-auth"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
             </form>
-
-            <!-- Register Form -->
             <form id="registerForm" class="auth-form">
                 <div class="form-group">
                     <label><i class="fas fa-user"></i> الاسم الكامل</label>
@@ -81,48 +1225,36 @@
                     <label><i class="fas fa-money-bill-wave"></i> رأس المال الابتدائي ($)</label>
                     <input type="number" id="initialCapital" value="1000" min="1" step="1" required>
                 </div>
-                <div id="registerAlert" class="alert" style="display:none;"></div>
-                <button type="submit" class="btn-auth">
-                    <i class="fas fa-user-plus"></i> إنشاء حساب
-                </button>
+                <div id="registerAlert" class="alert"></div>
+                <button type="submit" class="btn-auth"><i class="fas fa-user-plus"></i> إنشاء حساب</button>
             </form>
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MAIN APP -->
-    <!-- ============================================================ -->
+    <!-- ===== MAIN APP ===== -->
     <div id="appMain" class="hidden">
 
-        <!-- ===== TOP NAVBAR ===== -->
+        <!-- Navbar -->
         <nav class="navbar">
             <div class="nav-brand">
                 <i class="fas fa-chart-line"></i>
                 <span>PS-Trader <span class="badge-pro">Pro</span></span>
-                <a href="https://t.me/MOHAMMED_AK0" class="dev-link" target="_blank">
-                    <i class="fas fa-code"></i> المطور
-                </a>
+                <a href="https://t.me/MOHAMMED_AK0" class="dev-link" target="_blank"><i class="fas fa-code"></i> المطور</a>
             </div>
             <div class="nav-actions">
-                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-                    <i class="fas fa-moon"></i>
-                </button>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
                 <div class="user-badge" id="userInfo">
                     <span class="user-name" id="userGreeting">مرحباً، أحمد</span>
-                    <span class="capital-badge" id="capitalBadge">
-                        <i class="fas fa-wallet"></i> <span id="userCapital">$10,000</span>
-                    </span>
-                    <button id="logoutBtn" class="btn-logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
+                    <span class="capital-badge"><i class="fas fa-wallet"></i> <span id="userCapital">$10,000</span></span>
+                    <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
                 </div>
             </div>
         </nav>
 
-        <!-- ===== MAIN CONTENT ===== -->
+        <!-- Main Content -->
         <main class="main-content">
 
-            <!-- ===== KPI DASHBOARD ===== -->
+            <!-- KPI Grid -->
             <section class="kpi-grid" id="kpiGrid">
                 <div class="kpi-card">
                     <div class="kpi-icon blue"><i class="fas fa-chart-bar"></i></div>
@@ -169,7 +1301,7 @@
                 </div>
             </section>
 
-            <!-- ===== TABS ===== -->
+            <!-- Tabs -->
             <div class="tab-nav">
                 <button class="tab-btn active" data-tab="trades"><i class="fas fa-plus-circle"></i> إضافة</button>
                 <button class="tab-btn" data-tab="history"><i class="fas fa-history"></i> السجل</button>
@@ -180,15 +1312,13 @@
                 <button class="tab-btn" data-tab="analysis"><i class="fas fa-brain"></i> التحليل</button>
             </div>
 
-            <!-- ===== TAB CONTENT ===== -->
+            <!-- Tab Content -->
             <div class="tab-content-wrapper">
 
                 <!-- Trades Tab -->
                 <div id="trades-tab" class="tab-content active">
                     <div class="glass-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-plus-circle"></i> إضافة صفقة جديدة</h3>
-                        </div>
+                        <div class="card-header"><h3><i class="fas fa-plus-circle"></i> إضافة صفقة جديدة</h3></div>
                         <form id="tradeForm">
                             <div class="form-row">
                                 <div class="form-group">
@@ -203,7 +1333,7 @@
                                         <option value="ETH/USD">ETH/USD (إيثيريوم)</option>
                                         <option value="other">أخرى</option>
                                     </select>
-                                    <input type="text" id="otherAsset" placeholder="أدخل اسم الأصل" style="display:none; margin-top:8px;">
+                                    <input type="text" id="otherAsset" placeholder="أدخل اسم الأصل" style="display:none; margin-top:6px;">
                                 </div>
                                 <div class="form-group">
                                     <label><i class="fas fa-exchange-alt"></i> النوع</label>
@@ -239,7 +1369,7 @@
                                 <div class="form-group">
                                     <label><i class="fas fa-chart-line"></i> الربح/الخسارة ($)</label>
                                     <input type="number" id="profitLoss" step="0.01" placeholder="0.00" required>
-                                    <small style="color:var(--text-muted);">استخدم قيمة سالبة للخسارة</small>
+                                    <small>استخدم قيمة سالبة للخسارة</small>
                                 </div>
                             </div>
                             <div class="form-row">
@@ -251,7 +1381,7 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label><i class="fas fa-sticky-note"></i> ملاحظات (اختياري)</label>
-                                    <textarea id="notes" rows="3" placeholder="أضف ملاحظاتك حول الصفقة..."></textarea>
+                                    <textarea id="notes" rows="3" placeholder="أضف ملاحظاتك..."></textarea>
                                 </div>
                             </div>
                             <div class="form-row">
@@ -260,15 +1390,11 @@
                                     <input type="file" id="tradeImage" accept="image/*">
                                     <div class="image-preview">
                                         <img id="imagePreview" src="" alt="معاينة">
-                                        <button type="button" id="removeImageBtn" class="btn-icon" style="display:none;">
-                                            <i class="fas fa-times"></i>
-                                        </button>
+                                        <button type="button" id="removeImageBtn" class="btn-icon" style="display:none;"><i class="fas fa-times"></i></button>
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-save"></i> حفظ الصفقة
-                            </button>
+                            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> حفظ الصفقة</button>
                         </form>
                     </div>
                 </div>
@@ -302,10 +1428,7 @@
                             </div>
                         </div>
                         <div id="tradesList" class="trades-list">
-                            <div class="empty-state">
-                                <i class="fas fa-inbox"></i>
-                                <p>لا توجد صفقات لعرضها</p>
-                            </div>
+                            <div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد صفقات لعرضها</p></div>
                         </div>
                     </div>
                 </div>
@@ -316,9 +1439,9 @@
                         <div class="card-header">
                             <h3><i class="fas fa-calendar-alt"></i> تقويم الصفقات</h3>
                             <div class="calendar-nav">
-                                <button onclick="prevMonth()" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
-                                <span id="calendarTitle" style="font-weight:700; min-width:120px; text-align:center;">يناير 2024</span>
-                                <button onclick="nextMonth()" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
+                                <button onclick="prevMonth()"><i class="fas fa-chevron-right"></i></button>
+                                <span id="calendarTitle" style="font-weight:700; min-width:100px; text-align:center;">يناير 2024</span>
+                                <button onclick="nextMonth()"><i class="fas fa-chevron-left"></i></button>
                             </div>
                         </div>
                         <div id="calendarGrid" class="calendar-grid"></div>
@@ -328,8 +1451,8 @@
                             <span><span class="dot negative"></span> ربح سلبي</span>
                         </div>
                     </div>
-                    <div id="dayDetails" class="glass-card" style="display:none; margin-top:20px;">
-                        <h4 id="selectedDayTitle">تفاصيل اليوم</h4>
+                    <div id="dayDetails" class="glass-card" style="display:none; margin-top:16px;">
+                        <h4 id="selectedDayTitle" style="margin-bottom:10px;">تفاصيل اليوم</h4>
                         <div id="dayTradesList"></div>
                     </div>
                 </div>
@@ -356,14 +1479,10 @@
                 <!-- Strategy Tab -->
                 <div id="strategy-tab" class="tab-content">
                     <div class="glass-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-chess-board"></i> استراتيجية التداول</h3>
-                        </div>
+                        <div class="card-header"><h3><i class="fas fa-chess-board"></i> استراتيجية التداول</h3></div>
                         <div class="strategy-area">
                             <textarea id="strategyText" rows="8" placeholder="اكتب استراتيجيتك هنا..."></textarea>
-                            <button id="saveStrategyBtn" class="btn-primary">
-                                <i class="fas fa-save"></i> حفظ الاستراتيجية
-                            </button>
+                            <button id="saveStrategyBtn" class="btn-primary"><i class="fas fa-save"></i> حفظ الاستراتيجية</button>
                         </div>
                         <div class="strategy-preview">
                             <h4><i class="fas fa-eye"></i> معاينة</h4>
@@ -380,10 +1499,7 @@
                             <button id="analyzeBtn" class="btn-primary"><i class="fas fa-sync-alt"></i> تحديث</button>
                         </div>
                         <div id="analysisContent" class="analysis-content">
-                            <div class="empty-state">
-                                <i class="fas fa-chart-line"></i>
-                                <p>يحتاج التحليل إلى 5 صفقات على الأقل</p>
-                            </div>
+                            <div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-chart-line"></i><p>يحتاج التحليل إلى 5 صفقات على الأقل</p></div>
                         </div>
                     </div>
                 </div>
@@ -392,19 +1508,13 @@
         </main>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODALS -->
-    <!-- ============================================================ -->
-
-    <!-- Image Modal -->
+    <!-- ===== MODALS ===== -->
     <div id="imageModal" class="modal-overlay">
         <div class="modal-box">
             <button class="modal-close" onclick="closeModal('imageModal')">&times;</button>
             <img id="modalImage" src="" alt="صورة الصفقة">
         </div>
     </div>
-
-    <!-- Notes Modal -->
     <div id="notesModal" class="modal-overlay">
         <div class="modal-box">
             <button class="modal-close" onclick="closeModal('notesModal')">&times;</button>
@@ -412,8 +1522,6 @@
             <p id="notesContent"></p>
         </div>
     </div>
-
-    <!-- Capital Modal -->
     <div id="capitalModal" class="modal-overlay">
         <div class="modal-box">
             <button class="modal-close" onclick="closeModal('capitalModal')">&times;</button>
@@ -425,8 +1533,6 @@
             <button id="saveCapitalBtn" class="btn-primary"><i class="fas fa-save"></i> حفظ</button>
         </div>
     </div>
-
-    <!-- Edit Trade Modal -->
     <div id="editTradeModal" class="modal-overlay">
         <div class="modal-box">
             <button class="modal-close" onclick="closeModal('editTradeModal')">&times;</button>
@@ -446,7 +1552,7 @@
                             <option value="ETH/USD">ETH/USD</option>
                             <option value="other">أخرى</option>
                         </select>
-                        <input type="text" id="editOtherAsset" placeholder="أدخل اسم الأصل" style="display:none; margin-top:8px;">
+                        <input type="text" id="editOtherAsset" placeholder="أدخل اسم الأصل" style="display:none; margin-top:6px;">
                     </div>
                     <div class="form-group">
                         <label>النوع</label>
@@ -502,9 +1608,6 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- SCRIPTS -->
-    <!-- ============================================================ -->
     <script src="app.js"></script>
 </body>
 </html>
