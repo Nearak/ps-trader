@@ -974,6 +974,177 @@ $('editAsset')?.addEventListener('change', function() {
 });
 
 // ================================================================
+// بطاقة المشاركة (Share Card)
+// ================================================================
+
+// دالة لملء البطاقة بالبيانات
+function generateShareCard() {
+    if (!userData || userTrades.length === 0) {
+        alert('لا توجد بيانات كافية لإنشاء البطاقة. قم بإضافة بعض الصفقات أولاً.');
+        return;
+    }
+
+    // تصفية صفقات اليوم
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTrades = userTrades.filter(t => {
+        if (!t.date) return false;
+        const d = t.date instanceof Date ? t.date : new Date(t.date);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+    });
+
+    if (todayTrades.length === 0) {
+        alert('لا توجد صفقات اليوم لعرضها في البطاقة. قم بإضافة صفقة اليوم أولاً.');
+        return;
+    }
+
+    // حساب الإحصائيات
+    const total = todayTrades.length;
+    const wins = todayTrades.filter(t => t.result === 'ربح').length;
+    const losses = total - wins;
+    const profits = todayTrades.map(t => parseFloat(t.profitLoss) || 0);
+    const totalProfit = profits.filter(p => p > 0).reduce((a, b) => a + b, 0);
+    const totalLoss = profits.filter(p => p < 0).reduce((a, b) => a + Math.abs(b), 0);
+    const net = totalProfit - totalLoss;
+    const winRate = total > 0 ? (wins / total) * 100 : 0;
+    const bestTrade = profits.length > 0 ? Math.max(...profits) : 0;
+
+    // تعبئة العناصر
+    const dateStr = today.toLocaleDateString('ar-EG', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    document.getElementById('cardDate').textContent = dateStr;
+    document.getElementById('cardTotalTrades').textContent = total;
+    document.getElementById('cardWinRate').textContent = winRate.toFixed(1) + '%';
+
+    const netEl = document.getElementById('cardNetProfit');
+    netEl.textContent = (net >= 0 ? '+' : '') + '$' + net.toFixed(2);
+    netEl.style.color = net >= 0 ? '#00d4aa' : '#f6465d';
+
+    document.getElementById('cardBestTrade').textContent = '$' + bestTrade.toFixed(2);
+    document.getElementById('cardCapital').textContent = '$' + (userData.currentCapital || 0).toFixed(2);
+    document.getElementById('cardWins').textContent = wins;
+    document.getElementById('cardLosses').textContent = losses;
+
+    // فتح المودال
+    openModal('shareModal');
+}
+
+// دالة تحويل البطاقة إلى صورة وتحميلها
+async function downloadCardImage() {
+    const card = document.getElementById('tradeCard');
+    if (!card) return;
+
+    try {
+        const btn = document.getElementById('downloadCardBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+        btn.disabled = true;
+
+        const canvas = await html2canvas(card, {
+            scale: 2,
+            backgroundColor: null,
+            allowTaint: false,
+            useCORS: true,
+            logging: false,
+            borderRadius: '24px'
+        });
+
+        const link = document.createElement('a');
+        link.download = `بطاقة_صفقات_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    } catch (error) {
+        console.error('Error generating card image:', error);
+        alert('حدث خطأ أثناء تحميل الصورة. حاول مرة أخرى.');
+        const btn = document.getElementById('downloadCardBtn');
+        btn.innerHTML = '<i class="fas fa-download"></i> تحميل الصورة';
+        btn.disabled = false;
+    }
+}
+
+// دالة مشاركة الصورة عبر Web Share API
+async function shareCardImage() {
+    const card = document.getElementById('tradeCard');
+    if (!card) return;
+
+    try {
+        const btn = document.getElementById('shareCardActionBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التجهيز...';
+        btn.disabled = true;
+
+        const canvas = await html2canvas(card, {
+            scale: 2,
+            backgroundColor: null,
+            allowTaint: false,
+            useCORS: true,
+            logging: false,
+            borderRadius: '24px'
+        });
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+        if (navigator.share) {
+            const file = new File([blob], `بطاقة_صفقات_${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
+            await navigator.share({
+                title: 'بطاقة صفقاتي اليومية',
+                text: '📊 هذه هي إحصائيات صفقاتي لهذا اليوم!',
+                files: [file]
+            });
+        } else {
+            alert('ميزة المشاركة غير مدعومة في هذا المتصفح. سيتم تحميل الصورة بدلاً من ذلك.');
+            const link = document.createElement('a');
+            link.download = `بطاقة_صفقات_${new Date().toISOString().split('T')[0]}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error('Error sharing card:', error);
+            alert('حدث خطأ أثناء المشاركة. حاول تنزيل الصورة مباشرة.');
+        }
+        const btn = document.getElementById('shareCardActionBtn');
+        btn.innerHTML = '<i class="fas fa-share"></i> مشاركة';
+        btn.disabled = false;
+    }
+}
+
+// ================================================================
+// ربط أزرار البطاقة
+// ================================================================
+document.addEventListener('DOMContentLoaded', function() {
+    // زر فتح البطاقة
+    const shareBtn = document.getElementById('shareCardBtn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', generateShareCard);
+    }
+
+    // زر تحميل الصورة
+    const downloadBtn = document.getElementById('downloadCardBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', downloadCardImage);
+    }
+
+    // زر المشاركة
+    const shareActionBtn = document.getElementById('shareCardActionBtn');
+    if (shareActionBtn) {
+        shareActionBtn.addEventListener('click', shareCardImage);
+    }
+});
+
+// ================================================================
 // INIT
 // ================================================================
 initTheme();
