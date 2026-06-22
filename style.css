@@ -55,7 +55,8 @@
     box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
     height: 100%;
 }
 
@@ -1138,6 +1139,46 @@ body {
 .modal-box img {
     max-width: 100%;
     border-radius: var(--radius-sm);
+}
+
+/* ================================================================
+   بطاقة المشاركة (Share Card)
+   ================================================================ */
+#tradeCard {
+    transition: transform 0.3s ease;
+}
+#tradeCard:hover {
+    transform: scale(1.01);
+}
+
+#tradeCard .stat-value {
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.modal-box .btn-secondary {
+    background: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: var(--transition);
+}
+.modal-box .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* تحسين مظهر البطاقة في وضع الهاتف */
+@media (max-width: 480px) {
+    #tradeCard {
+        padding: 20px 16px !important;
+    }
+    #tradeCard .stat-value {
+        font-size: 20px !important;
+    }
 }
 
 /* ================================================================
