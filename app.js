@@ -974,65 +974,87 @@ $('editAsset')?.addEventListener('change', function() {
 });
 
 // ================================================================
-// بطاقة المشاركة (Share Card)
+// بطاقة المشاركة (اليوم فقط)
 // ================================================================
 
-// دالة لملء البطاقة بالبيانات
+// دالة لملء البطاقة بصفقات اليوم فقط
 function generateShareCard() {
-    if (!userData || userTrades.length === 0) {
-        alert('لا توجد بيانات كافية لإنشاء البطاقة. قم بإضافة بعض الصفقات أولاً.');
+    console.log("🔄 Generating today's share card...");
+
+    // التحقق من وجود بيانات
+    if (!userData) {
+        console.error("❌ User data not loaded.");
+        alert('الرجاء تسجيل الدخول أولاً.');
         return;
     }
 
-    // تصفية صفقات اليوم
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTrades = userTrades.filter(t => {
-        if (!t.date) return false;
-        const d = t.date instanceof Date ? t.date : new Date(t.date);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() === today.getTime();
-    });
-
-    if (todayTrades.length === 0) {
-        alert('لا توجد صفقات اليوم لعرضها في البطاقة. قم بإضافة صفقة اليوم أولاً.');
+    if (userTrades.length === 0) {
+        console.warn("⚠️ No trades found.");
+        alert('لا توجد صفقات مسجلة لعرضها في البطاقة.');
         return;
     }
 
-    // حساب الإحصائيات
-    const total = todayTrades.length;
-    const wins = todayTrades.filter(t => t.result === 'ربح').length;
-    const losses = total - wins;
-    const profits = todayTrades.map(t => parseFloat(t.profitLoss) || 0);
-    const totalProfit = profits.filter(p => p > 0).reduce((a, b) => a + b, 0);
-    const totalLoss = profits.filter(p => p < 0).reduce((a, b) => a + Math.abs(b), 0);
-    const net = totalProfit - totalLoss;
-    const winRate = total > 0 ? (wins / total) * 100 : 0;
-    const bestTrade = profits.length > 0 ? Math.max(...profits) : 0;
+    try {
+        // تحديد اليوم الحالي (منتصف الليل)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // تعبئة العناصر
-    const dateStr = today.toLocaleDateString('ar-EG', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+        // تصفية صفقات اليوم
+        const todayTrades = userTrades.filter(t => {
+            if (!t.date) return false;
+            const d = t.date instanceof Date ? t.date : new Date(t.date);
+            return d >= today && d < tomorrow;
+        });
 
-    document.getElementById('cardDate').textContent = dateStr;
-    document.getElementById('cardTotalTrades').textContent = total;
-    document.getElementById('cardWinRate').textContent = winRate.toFixed(1) + '%';
+        if (todayTrades.length === 0) {
+            alert('لا توجد صفقات اليوم. قم بإضافة صفقة اليوم أولاً.');
+            return;
+        }
 
-    const netEl = document.getElementById('cardNetProfit');
-    netEl.textContent = (net >= 0 ? '+' : '') + '$' + net.toFixed(2);
-    netEl.style.color = net >= 0 ? '#00d4aa' : '#f6465d';
+        console.log(`📊 Found ${todayTrades.length} trades for today.`);
 
-    document.getElementById('cardBestTrade').textContent = '$' + bestTrade.toFixed(2);
-    document.getElementById('cardCapital').textContent = '$' + (userData.currentCapital || 0).toFixed(2);
-    document.getElementById('cardWins').textContent = wins;
-    document.getElementById('cardLosses').textContent = losses;
+        // حساب الإحصائيات
+        const total = todayTrades.length;
+        const wins = todayTrades.filter(t => t.result === 'ربح').length;
+        const losses = total - wins;
+        const profits = todayTrades.map(t => parseFloat(t.profitLoss) || 0);
+        const totalProfit = profits.filter(p => p > 0).reduce((a, b) => a + b, 0);
+        const totalLoss = profits.filter(p => p < 0).reduce((a, b) => a + Math.abs(b), 0);
+        const net = totalProfit - totalLoss;
+        const winRate = total > 0 ? (wins / total) * 100 : 0;
+        const bestTrade = profits.length > 0 ? Math.max(...profits) : 0;
 
-    // فتح المودال
-    openModal('shareModal');
+        // تعبئة العناصر
+        const dateStr = today.toLocaleDateString('ar-EG', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        document.getElementById('cardDate').textContent = dateStr;
+        document.getElementById('cardTotalTrades').textContent = total;
+        document.getElementById('cardWinRate').textContent = winRate.toFixed(1) + '%';
+
+        const netEl = document.getElementById('cardNetProfit');
+        netEl.textContent = (net >= 0 ? '+' : '') + '$' + net.toFixed(2);
+        netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+
+        document.getElementById('cardBestTrade').textContent = '$' + bestTrade.toFixed(2);
+        document.getElementById('cardCapital').textContent = '$' + (userData.currentCapital || 0).toFixed(2);
+        document.getElementById('cardWins').textContent = wins;
+        document.getElementById('cardLosses').textContent = losses;
+
+        // فتح المودال
+        openModal('shareModal');
+        console.log("✅ Today's share card generated successfully!");
+
+    } catch (error) {
+        console.error("❌ Error generating share card:", error);
+        alert('حدث خطأ أثناء إنشاء البطاقة. راجع وحدة التحكم للتفاصيل.');
+    }
 }
 
 // دالة تحويل البطاقة إلى صورة وتحميلها
@@ -1047,8 +1069,8 @@ async function downloadCardImage() {
         btn.disabled = true;
 
         const canvas = await html2canvas(card, {
-            scale: 2,
-            backgroundColor: null,
+            scale: 2.5,
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim() || '#1a1d27',
             allowTaint: false,
             useCORS: true,
             logging: false,
@@ -1083,8 +1105,8 @@ async function shareCardImage() {
         btn.disabled = true;
 
         const canvas = await html2canvas(card, {
-            scale: 2,
-            backgroundColor: null,
+            scale: 2.5,
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim() || '#1a1d27',
             allowTaint: false,
             useCORS: true,
             logging: false,
@@ -1096,7 +1118,7 @@ async function shareCardImage() {
         if (navigator.share) {
             const file = new File([blob], `بطاقة_صفقات_${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
             await navigator.share({
-                title: 'بطاقة صفقاتي اليومية',
+                title: 'بطاقة صفقات اليوم',
                 text: '📊 هذه هي إحصائيات صفقاتي لهذا اليوم!',
                 files: [file]
             });
@@ -1129,6 +1151,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const shareBtn = document.getElementById('shareCardBtn');
     if (shareBtn) {
         shareBtn.addEventListener('click', generateShareCard);
+        console.log("✅ Share button event attached.");
+    } else {
+        console.warn("⚠️ Share button not found.");
     }
 
     // زر تحميل الصورة
